@@ -69,6 +69,10 @@ typedef struct tagICMPEchoRequest{
 	int time;
 	char charfillData[REQ_DATASIZE];
 };
+/*
+	Initialize Structs
+*/
+
 typedef struct tagICMPHeader ICMPHeader;
 typedef struct tagICMPEchoRequest ICMPEchoRequest;
 echo_req.icmpHdr.type = ICMP_ECHOREQ;
@@ -123,6 +127,9 @@ ping()
 	}
 	/* blah = sendto(s, msg, len, flags, to, tolen) */
 	sendTo(      ); // actually sends the packet
+	
+	// Increment sequence number
+	// 
 }
 
 
@@ -136,7 +143,13 @@ listen()
 	/* Wait for reply... or timeout */
 	
 	/* Receive reply */
-	/* Lost packets: did you get a sequence without missing numbers? */
+	
+	// Get the info out of it
+	
+	// Was it an error packet? Uh oh!
+	
+	/* Lost packets: was this packet in order with the sequence? */
+	
  	
 }
 
@@ -148,6 +161,10 @@ listen()
 */
 report()
 {
+	// Any missing packets?
+	// Delays for each packet
+	// Print it!
+	
 
 }
 
