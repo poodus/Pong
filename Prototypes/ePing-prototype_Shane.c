@@ -39,39 +39,41 @@ socket(AF_NET, SOCK_RAW, ICMPPROTO_ICMP);
 /*
 	IP HEADER
 */
-typedef struct tagIPHDR
+typedef struct tagIPHeader
 {
-	u_char VIHL;
-	u_char TOS;
-	short TotLen;
+	u_char versionHeaderLength;
+	u_char typeOfService;
+	short totalLength;
 	short ID;
-	short FlagOff;
-	u_char TTL;
-	u_char Protocol;
-	u_short Checksum;
-	struct in_addr iaSrc;
-	struct in_addr iaDst;
-} IPHDR, *PIPHDR;
+	short flagsFragOff;
+	u_char timeToLive;
+	u_char protocol;
+	u_short checksum;
+	struct in_addr srcIpAddress;
+	struct in_addr destIpAddress;
+};
 
 /* 
 	ICMP HEADER 
 */
-typedef struct tagICMPHDR{
+typedef struct tagICMPHeader{
 	u_char type;
 	u_char code;
 	u_short checksum;
 	u_short identifier;
-	u_short sequence number;
-} ICMPHDR, *PICMPHDR
+	u_short sequencenumber;
+};
 
-typedef struct icmpEchoRequest{
-	icmpHeader header;
+typedef struct tagICMPEchoRequest{
+	ICMPHeader header;
 	int time;
-	charfillData;
-} 
-echo_req.icmpHdr.Type = ICMP_ECHOREQ;
-echo_req.icmpHdr.Code = 0;
-echo_req.icmpHdr.Checksum = 0;
+	char charfillData[REQ_DATASIZE];
+};
+typedef struct tagICMPHeader ICMPHeader;
+typedef struct tagICMPEchoRequest ICMPEchoRequest;
+echo_req.icmpHdr.type = ICMP_ECHOREQ;
+echo_req.icmpHdr.code = 0;
+echo_req.icmpHdr.checksum = 0;
 echo_req.icmpHdr.ID = id++;
 echo_req.icmpHdr.Seq = seq++;
 
