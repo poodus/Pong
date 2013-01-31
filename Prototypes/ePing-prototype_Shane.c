@@ -52,6 +52,21 @@ typedef struct tagIPHeader
 	struct in_addr srcIpAddress;
 	struct in_addr destIpAddress;
 };
+/*
+	Address Info Struct
+*/
+
+struct addrinfo {
+	int ai_flags; // AI_Passive
+	int ai_family; // Inet? Inet6? Unspecified?
+	int ai_socktype; // Stream or Datagram: SOCK_STREAM or SOCK_DIAGRAM
+	int ai_protocol; //
+	size_t ai_addrlen;  // Size of ai_addr in bytes
+	struct sockaddr *ai_addr; // other struct
+	char *ai_canonname; //full canonical hostname
+	struct addrinfo *ai_next; // linked list, next node
+}
+
 
 /* 
 	ICMP HEADER 
