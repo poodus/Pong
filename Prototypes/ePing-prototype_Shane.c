@@ -1,88 +1,81 @@
+/*  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+*
+*                    ePing: Flexible Ping Utility Prototype
+*  			
+*                             Ericsson                   
+*                                                                       
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+*   
+*              Name: ePing-prototype.c
+*     Creation Date: 1/2013
+*            Author: Shane Reetz + Co.
+*  
+*       Description: This is just me learning about the network programming
+*			libraries we will be using. This document attempts
+*			but does not rigorously follow coding standards.
+*  
+* 
+*	Code Review:
+*  
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+
 /*
- * ePing
- *
- * NOTE: This is just me playing around with the general structure
- * of the program based on some textbook examples. As of yet, it does 
- * not necessarily follow coding standards and it probably won't even 
- * compile. Don't shoot me.
- *
- * Using the Internet Control Message Protocol (ICMP) "ECHO" facility,
- * measure round-trip-delays and packet loss across network paths.
- *
+*
+* Imports
+*
 */
 
 
-/* Questions
-
-   what do the statements after the structs mean?
-*/
 
 /*
-NOTES
-high level:
-
-send ping. start listener to get incoming pings.
-
-create socket
-IPheader = 20 bytes
-ICMP message = variable length
-	TYPE(of ICMP message) CODE (indicate a specific condition)  CHECKSUM(depends on TYPE and CODE)
-	MESSAGE
-
-	IDENTIFIER	SEQUENCE NUMBER(this is how you identify lost packets)
-
-TYPE 8 = request
-TYPE 0 = echo reply
-TYPE 3 = host unreachable
-*/
-socket(AF_NET, SOCK_RAW, ICMPPROTO_ICMP);
-/*
-	IP HEADER
+	IP Header
 */
 typedef struct tagIPHeader
 {
-	u_char versionHeaderLength;
-	u_char typeOfService;
-	short totalLength;
-	short ID;
-	short flagsFragOff;
-	u_char timeToLive;
-	u_char protocol;
+	u_char 	versionHeaderLength;
+	u_char 	typeOfService;
+	short 	totalLength;
+	short 	ID;
+	short 	flagsFragOff;
+	u_char 	timeToLive;
+	u_char 	protocol;
 	u_short checksum;
-	struct in_addr srcIpAddress;
-	struct in_addr destIpAddress;
+	struct 	in_addr srcIpAddress;
+	struct 	in_addr destIpAddress;
 };
 /*
 	Address Info Struct
 */
 
 struct addrinfo {
-	int ai_flags; // AI_Passive
-	int ai_family; // Inet? Inet6? Unspecified?
-	int ai_socktype; // Stream or Datagram: SOCK_STREAM or SOCK_DIAGRAM
-	int ai_protocol; //
-	size_t ai_addrlen;  // Size of ai_addr in bytes
-	struct sockaddr *ai_addr; // other struct
-	char *ai_canonname; //full canonical hostname
-	struct addrinfo *ai_next; // linked list, next node
-}
+	int 	ai_flags; // AI_Passive
+	int 	ai_family; // Inet? Inet6? Unspecified?
+	int 	ai_socktype; // Stream or Datagram: SOCK_STREAM or SOCK_DIAGRAM
+	int 	ai_protocol; //
+	size_t 	ai_addrlen;  // Size of ai_addr in bytes
+	struct 	sockaddr *ai_addr; // other struct
+	char 	*ai_canonname; //full canonical hostname
+	struct 	addrinfo *ai_next; // linked list, next node
+};
 
 
 /* 
 	ICMP HEADER 
 */
 typedef struct tagICMPHeader{
-	u_char type;
-	u_char code;
+	u_char 	type;
+	u_char 	code;
 	u_short checksum;
 	u_short identifier;
 	u_short sequencenumber;
 };
 
 typedef struct tagICMPEchoRequest{
-	ICMPHeader header;
-	int time;
-	char charfillData[REQ_DATASIZE];
+	ICMPHeader 	header;
+	int		time;
+	char 		charfillData[REQ_DATASIZE];
 };
 /*
 	Initialize Structs
@@ -96,8 +89,8 @@ echo_req.icmpHdr.checksum = 0;
 echo_req.icmpHdr.ID = id++;
 echo_req.icmpHdr.Seq = seq++;
 
-
-
+// Create a socket
+socket(AF_NET, SOCK_RAW, ICMPPROTO_ICMP);
 
 /*
 
