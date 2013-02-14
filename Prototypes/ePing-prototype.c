@@ -103,18 +103,37 @@ char *argv[];
 	// Grab arguments from command line and set flags
 	// Number of Pings
 	// Packet Size
-	ping();
-	listen();
-	report();
-
+	// How does runSequence work into here?
+	buildPacket(); // get a packet ready to send. will call computeChecksum()
+	send(); // send will call listen() and printPacket()
+	printStatistics();
 }
 
 /*
 
-	Ping()
+	buildPacket()
+	
+*/
+buildPacket()
+{
+	// Put everything together
+}
+
+/*
+
+	computeChecksum()
+	
+*/
+computeChecksum()
+{
+	// Compute it!
+}
+/*
+
+	Send()
 
 */
-ping()
+send()
 {
 	// Fill in some data to send
 	memset(echo_req.cData, ' ', REQ_DATASIZE);
@@ -137,7 +156,9 @@ ping()
 	sendTo(      ); // actually sends the packet
 	
 	// Increment sequence number
-	// 
+	// SET ALARM
+	setAlarm();
+	listen();
 }
 
 
@@ -157,17 +178,29 @@ listen()
 	// Was it an error packet? Uh oh!
 	
 	/* Lost packets: was this packet in order with the sequence? */
-	
+	printPacket();
  	
 }
 
 
 /*
 
-	Report()
+	PrintPacket()
 
 */
-report()
+printPacket()
+{
+	// Print a single line about the current packet received
+	// Print it!
+	
+
+}
+/*
+
+	PrintStatistics()
+
+*/
+printStatistics()
 {
 	// Any missing packets?
 	// Delays for each packet
