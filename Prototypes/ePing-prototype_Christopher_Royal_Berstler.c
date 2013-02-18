@@ -40,7 +40,7 @@ TYPE 3 = host unreachable
 /*
 	IP HEADER
 */
-typedef struct tagIPHeader
+struct tagIPHeader
 {
 	u_char versionHeaderLength;
 	u_char typeOfService;
@@ -66,7 +66,7 @@ struct addrinfo {
 	struct sockaddr *ai_addr; // other struct
 	char *ai_canonname; //full canonical hostname
 	struct addrinfo *ai_next; // linked list, next node
-}
+};
 
 
 /* 
@@ -77,14 +77,15 @@ typedef struct tagICMPHeader{
 	u_char code;
 	u_short checksum;
 	u_short identifier;
-	u_short sequencenumber;
-};
+	u_short sequenceNumber;
+}ICMPHeader;
 
-typedef struct tagICMPEchoRequest{
-	ICMPHeader header;
+struct tagICMPEchoRequest{
+	ICMPHeader icmpHeader;
 	int time;
-	char charfillData[REQ_DATASIZE];
-};
+	//char charfillData[REQ_DATASIZE];
+	char charfillData[3];
+}echo_req;
 /*
 	Initialize Structs
 */
@@ -94,31 +95,6 @@ typedef struct tagICMPEchoRequest ICMPEchoRequest;
 
 
 
-
-
-/*
-
-	Main
-
-*/
-main(argc, argv)
-char *argv[];
-{
-	socket(AF_NET, SOCK_RAW, ICMPPROTO_ICMP);
-	echo_req.icmpHdr.type = ICMP_ECHOREQ;
-	echo_req.icmpHdr.code = 0;
-	echo_req.icmpHdr.checksum = 0;
-	echo_req.icmpHdr.ID = id++;
-	echo_req.icmpHdr.Seq = seq++;
-	// Grab arguments from command line and set flags
-	// Number of Pings
-	// Packet Size
-	ping();
-	listen();
-	report();
-
-}
-
 /*
 
 	Ping()
@@ -127,13 +103,13 @@ char *argv[];
 ping()
 {
 	// Fill in some data to send
-	memset(echo_req.cData, ' ', REQ_DATASIZE);
+	memset(echo_req.charfillData, ' ', REQ_DATASIZE);
 
 	// Save tick count when sent (milliseconds)
-	echo_req.dwTime = gettime ...;
+	//echo_req.time = gettime ...;
 
 	// Put data in packet and compute checksum
-	echo_req.icmpHdr.Checksum = in_cksum(...);
+	//echo_req.icmpHeader.checksum = in_cksum(...);
 	
 	readfds.fd_count = 1; // set size
 	readfds.fd_array[0] = raw; // socket set
@@ -185,4 +161,31 @@ report()
 	
 
 }
+
+
+/*
+
+	Main
+
+*/
+char *argv[2];
+int main(int argc, const char** argv){
+	int ICMPEchoRequest=8;
+	int id=GetCurrentProcessId();
+	int seq=0;
+	socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
+	echo_req.icmpHeader.type = ICMPEchoRequest;
+	echo_req.icmpHeader.code = 0;	
+	echo_req.icmpHeader.checksum = 0;
+	echo_req.icmpHeader.identifier = id;
+	echo_req.icmpHeader.sequenceNumber = seq;
+	// Grab arguments from command line and set flags
+	// Number of Pings
+	// Packet Size
+	ping();
+	listen();
+	report();
+
+}
+
 
