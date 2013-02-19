@@ -27,7 +27,7 @@ send ping. start listener to get incoming pings.
 create socket
 IPheader = 20 bytes
 ICMP message = variable length
-	TYPE(of ICMP message) CODE (indicate a specific condition)  CHECKSUM(depends on TYPE and CODE)
+	TYPE(of ICMP message) CODE (indicate a specific condition)  CHECKSUM(Checksum of the packet for verification)
 	MESSAGE
 
 	IDENTIFIER	SEQUENCE NUMBER(this is how you identify lost packets)
@@ -83,9 +83,9 @@ typedef struct tagICMPHeader{
 struct tagICMPEchoRequest{
 	ICMPHeader icmpHeader;
 	int time;
-	//char charfillData[REQ_DATASIZE];
+	char charfillData[REQ_DATASIZE];
 	char charfillData[3];
-}echo_req;
+};
 /*
 	Initialize Structs
 */
@@ -93,6 +93,11 @@ struct tagICMPEchoRequest{
 typedef struct tagICMPHeader ICMPHeader;
 typedef struct tagICMPEchoRequest ICMPEchoRequest;
 
+typedef union{
+	tagIPHeader;
+	ICMPEchoRequest;
+	
+};
 
 
 /*
@@ -100,27 +105,27 @@ typedef struct tagICMPEchoRequest ICMPEchoRequest;
 	Ping()
 
 */
-ping()
+void ping(int socketDescriptor,int REQ_DATASIZE)
 {
 	// Fill in some data to send
-	memset(echo_req.charfillData, ' ', REQ_DATASIZE);
+	memset(ICMPEchoRequest.charfillData, ' ', REQ_DATASIZE);
 
 	// Save tick count when sent (milliseconds)
-	//echo_req.time = gettime ...;
+	//echoRequest.time = gettime ...;
 
 	// Put data in packet and compute checksum
-	//echo_req.icmpHeader.checksum = in_cksum(...);
+	//echoRequest.icmpHeader.checksum = in_cksum(...);
 	
-	readfds.fd_count = 1; // set size
-	readfds.fd_array[0] = raw; // socket set
-	timeout.tv_sec = 10; // timeout (s)
-	timeout.tv_usec = 0; // timeout (us)
+	//readfds.fd_count = 1; // set size
+	//readfds.fd_array[0] = raw; // socket set
+	//timeout.tv_sec = 10; // timeout (s)
+	//timeout.tv_usec = 0; // timeout (us)
 
-	if((rc = select(1, &readfds, NULL, NULL, &timeout)) == SOCKET_ERROR){
+	if((rc = select(1, &socketDescriptor, NULL, NULL, &timeout)) == SOCKET_ERROR){
 		errexit("select() failed %d\n", perror());
 	}
 	/* blah = sendto(s, msg, len, flags, to, tolen) */
-	sendTo(      ); // actually sends the packet
+	sendTo(socketDescriptor); // actually sends the packet
 	
 	// Increment sequence number
 	// 
@@ -132,7 +137,7 @@ ping()
 	Listen()
 
 */
-listen()
+void listen(int socketDescriptor)
 {
 	/* Wait for reply... or timeout */
 	
@@ -153,7 +158,7 @@ listen()
 	Report()
 
 */
-report()
+void report()
 {
 	// Any missing packets?
 	// Delays for each packet
@@ -162,28 +167,37 @@ report()
 
 }
 
+/*
+	buildPing()
+*/
+
+void buildPing(int REQ_DATASIZE){
+
+}
+
+
 
 /*
 
-	Main
+	Main()
 
 */
 char *argv[2];
 int main(int argc, const char** argv){
-	int ICMPEchoRequest=8;
+	int ICMPEchoRequest.type=8;
 	int id=GetCurrentProcessId();
 	int seq=0;
-	socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
-	echo_req.icmpHeader.type = ICMPEchoRequest;
-	echo_req.icmpHeader.code = 0;	
-	echo_req.icmpHeader.checksum = 0;
-	echo_req.icmpHeader.identifier = id;
-	echo_req.icmpHeader.sequenceNumber = seq;
+	int REQ_DATASIZE=10;
+	int inSocketDescriptor;
+	int outSocketDescriptor;
+	inSocketDescriptor=socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
+	outSocketDescriptor=socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	// Grab arguments from command line and set flags
 	// Number of Pings
 	// Packet Size
-	ping();
-	listen();
+	buildPing(REQ_DATASIZE);
+	ping(outSocketDescriptor,REQ_DATASIZE);
+	listen(socketDescriptor);
 	report();
 
 }
