@@ -42,6 +42,8 @@ GetCurrentProcessID should be changed to an actual function
 #include <errno.h>
 #include <Windows.h>
 
+#include <stdio.h>
+
 
 
 /* Questions
@@ -153,14 +155,16 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 	// timeout.tv_usec = 0; // timeout (us)
 
 	if((rc = select(1, &socketDescriptor, NULL, NULL, &timeout)) == SOCKET_ERROR){
-		errexit("select() failed %d\n", perror("The following error happened:"));
+		errexit(perror("select() failed %d\n"));
 	}
+	
 	/* blah = sendto(s, msg, len, flags, to, tolen) */
 	// sendto(socketDescriptor); // actually sends the packet
 	
 	// Increment sequence number
 	
 }
+
 
 
 /*
@@ -202,7 +206,7 @@ void report()
 	buildPing()
 */
 
-void buildPing(int REQ_DATASIZE){
+void buildPing(int REQ_DATASIZE, DWORD id, int seq, int sd){
 	ICMPEchoRequest.icmpHeader.type='8';
 	ICMPEchoRequest.icmpHeader.code='0';
 }
@@ -216,6 +220,7 @@ void buildPing(int REQ_DATASIZE){
 */
 char *argv[2];
 int main(int argc, const char** argv){
+printf("Helloo World");
 	DWORD id=GetCurrentProcessId();
 	int seq=0;
 	int REQ_DATASIZE=10;
@@ -226,7 +231,7 @@ int main(int argc, const char** argv){
 	// Grab arguments from command line and set flags
 	// Number of Pings
 	// Packet Size
-	buildPing(REQ_DATASIZE);
+	buildPing(REQ_DATASIZE,id,seq,outSocketDescriptor);
 	ping(outSocketDescriptor,REQ_DATASIZE);
 	listen(inSocketDescriptor);
 	report();
