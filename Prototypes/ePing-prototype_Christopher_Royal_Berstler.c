@@ -181,7 +181,7 @@ void report()
 	buildPing()
 */
 
-void buildPing(int REQ_DATASIZE, int seq, int sd){
+void buildPing(int REQ_DATASIZE, int seq){
 	ICMPEchoRequest.icmpHeader.type='8';
 	ICMPEchoRequest.icmpHeader.code='0';
 }
@@ -239,7 +239,7 @@ printf("Hello World\n");
 	// Grab arguments from command line and set flags
 	// Number of Pings
 	// Packet Size
-	buildPing(REQ_DATASIZE,seq,outSocketDescriptor);
+	buildPing(REQ_DATASIZE,seq);
 	ping(outSocketDescriptor,REQ_DATASIZE);
 	listen(inSocketDescriptor);
 	report();
