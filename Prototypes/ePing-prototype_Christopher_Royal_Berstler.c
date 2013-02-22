@@ -40,6 +40,9 @@ GetCurrentProcessID should be changed to an actual function
 #include <ctype.h>
 #include <errno.h>
 #include <errno.h>
+#include <Windows.h>
+
+
 
 /* Questions
 
@@ -139,15 +142,15 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 	memset(ICMPEchoRequest.charfillData, ' ', REQ_DATASIZE);
 
 	// Save tick count when sent (milliseconds)
-	//echoRequest.time = gettime ...;
+	// echoRequest.time = gettime ...;
 
 	// Put data in packet and compute checksum
-	//echoRequest.icmpHeader.checksum = in_cksum(...);
+	// echoRequest.icmpHeader.checksum = in_cksum(...);
 	
-	//readfds.fd_count = 1; // set size
-	//readfds.fd_array[0] = raw; // socket set
-	//timeout.tv_sec = 10; // timeout (s)
-	//timeout.tv_usec = 0; // timeout (us)
+	// readfds.fd_count = 1; // set size
+	// readfds.fd_array[0] = raw; // socket set
+	// timeout.tv_sec = 10; // timeout (s)
+	// timeout.tv_usec = 0; // timeout (us)
 
 	if((rc = select(1, &socketDescriptor, NULL, NULL, &timeout)) == SOCKET_ERROR){
 		errexit("select() failed %d\n", perror("The following error happened:"));
@@ -156,7 +159,7 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 	// sendto(socketDescriptor); // actually sends the packet
 	
 	// Increment sequence number
-	// 
+	
 }
 
 
@@ -213,7 +216,7 @@ void buildPing(int REQ_DATASIZE){
 */
 char *argv[2];
 int main(int argc, const char** argv){
-	// int id=GetCurrentProcessId();
+	DWORD id=GetCurrentProcessId();
 	int seq=0;
 	int REQ_DATASIZE=10;
 	int inSocketDescriptor;
