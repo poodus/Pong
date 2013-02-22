@@ -1,4 +1,3 @@
-# include <winsock.h>
 /*
  * ePing
  *
@@ -11,7 +10,36 @@
  * measure round-trip-delays and packet loss across network paths.
  *
 */
+/*
+TODO:
+Parse command line arguments
+GetCurrentProcessID should be changed to an actual function
+ */
 
+
+/*
+*
+* Imports
+*
+*/
+#include <sys/param.h>
+#include <sys/socket.h>
+#include <sys/file.h>
+#include <sys/time.h>
+#include <sys/signal.h>
+
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <netinet/ip_icmp.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <errno.h>
+#include <errno.h>
 
 /* Questions
 
@@ -57,17 +85,16 @@ struct tagIPHeader
 	Address Info Struct
 */
 
-struct addrinfo {
-	int ai_flags; // AI_Passive
-	int ai_family; // Inet? Inet6? Unspecified?
-	int ai_socktype; // Stream or Datagram: SOCK_STREAM or SOCK_DIAGRAM
-	int ai_protocol; //
-	size_t ai_addrlen;  // Size of ai_addr in bytes
-	struct sockaddr *ai_addr; // other struct
-	char *ai_canonname; //full canonical hostname
-	struct addrinfo *ai_next; // linked list, next node
-};
-
+// struct addrinfo {
+	// int ai_flags; // AI_Passive
+	// int ai_family; // Inet? Inet6? Unspecified?
+	// int ai_socktype; // Stream or Datagram: SOCK_STREAM or SOCK_DIAGRAM
+	// int ai_protocol; //
+	// size_t ai_addrlen;  // Size of ai_addr in bytes
+	// struct sockaddr *ai_addr; // other struct
+	// char *ai_canonname; //full canonical hostname
+	// struct addrinfo *ai_next; // linked list, next node
+// };
 
 /* 
 	ICMP HEADER 
@@ -78,26 +105,27 @@ typedef struct tagICMPHeader{
 	u_short checksum;
 	u_short identifier;
 	u_short sequenceNumber;
-}ICMPHeader;
+}icmpHeader;
 
 struct tagICMPEchoRequest{
-	ICMPHeader icmpHeader;
+	tagICMPHeader icmpHeader;
 	int time;
-	char charfillData[REQ_DATASIZE];
+	//char charfillData[REQ_DATASIZE];
 	char charfillData[3];
 };
 /*
 	Initialize Structs
 */
+// tagICMPHeader ICMPHeader;
+tagICMPEchoRequest ICMPEchoRequest;
+addrinfo addressInfo;
 
-typedef struct tagICMPHeader ICMPHeader;
-typedef struct tagICMPEchoRequest ICMPEchoRequest;
 
-typedef union{
-	tagIPHeader;
-	ICMPEchoRequest;
-	
-};
+
+// union{
+	// tagIPHeader IPheader;
+	// tagICMPEchoRequest ICMPEchoRequest;
+// } packet;
 
 
 /*
@@ -122,10 +150,10 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 	//timeout.tv_usec = 0; // timeout (us)
 
 	if((rc = select(1, &socketDescriptor, NULL, NULL, &timeout)) == SOCKET_ERROR){
-		errexit("select() failed %d\n", perror());
+		errexit("select() failed %d\n", perror("The following error happened:"));
 	}
 	/* blah = sendto(s, msg, len, flags, to, tolen) */
-	sendTo(socketDescriptor); // actually sends the packet
+	// sendto(socketDescriptor); // actually sends the packet
 	
 	// Increment sequence number
 	// 
@@ -172,7 +200,8 @@ void report()
 */
 
 void buildPing(int REQ_DATASIZE){
-
+	ICMPEchoRequest.icmpHeader.type='8';
+	ICMPEchoRequest.icmpHeader.code='0';
 }
 
 
@@ -184,8 +213,7 @@ void buildPing(int REQ_DATASIZE){
 */
 char *argv[2];
 int main(int argc, const char** argv){
-	int ICMPEchoRequest.type=8;
-	int id=GetCurrentProcessId();
+	// int id=GetCurrentProcessId();
 	int seq=0;
 	int REQ_DATASIZE=10;
 	int inSocketDescriptor;
@@ -197,7 +225,7 @@ int main(int argc, const char** argv){
 	// Packet Size
 	buildPing(REQ_DATASIZE);
 	ping(outSocketDescriptor,REQ_DATASIZE);
-	listen(socketDescriptor);
+	listen(inSocketDescriptor);
 	report();
 
 }
