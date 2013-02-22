@@ -40,33 +40,10 @@ GetCurrentProcessID should be changed to an actual function
 #include <ctype.h>
 #include <errno.h>
 #include <errno.h>
+#if __unix__
+#elif __WINDOWS__
 #include <Windows.h>
-
-
-
-/* Questions
-
-   what do the statements after the structs mean?
-*/
-
-/*
-NOTES
-high level:
-
-send ping. start listener to get incoming pings.
-
-create socket
-IPheader = 20 bytes
-ICMP message = variable length
-	TYPE(of ICMP message) CODE (indicate a specific condition)  CHECKSUM(Checksum of the packet for verification)
-	MESSAGE
-
-	IDENTIFIER	SEQUENCE NUMBER(this is how you identify lost packets)
-
-TYPE 8 = request
-TYPE 0 = echo reply
-TYPE 3 = host unreachable
-*/
+#endif
 
 /*
 	IP HEADER
@@ -207,6 +184,40 @@ void buildPing(int REQ_DATASIZE){
 	ICMPEchoRequest.icmpHeader.code='0';
 }
 
+/*
+
+in_cksum not from 
+*/
+static int in_cksum(u_short *addr, int len)
+{
+        register int nleft = len;
+        register u_short *w = addr;
+        register int sum = 0;
+        u_short answer = 0;
+
+        /*
+         * Our algorithm is simple, using a 32 bit accumulator (sum), we add
+         * sequential 16 bit words to it, and at the end, fold back all the
+         * carry bits from the top 16 bits into the lower 16 bits.
+         */
+        while (nleft > 1)  {
+                sum += *w++;
+                nleft -= 2;
+        }
+
+        /* mop up an odd byte, if necessary */
+        if (nleft == 1) {
+                *(u_char *)(&answer) = *(u_char *)w ;
+                sum += answer;
+        }
+
+        /* add back carry outs from top 16 bits to low 16 bits */
+        sum = (sum >> 16) + (sum & 0xffff);     /* add hi 16 to low 16 */
+        sum += (sum >> 16);                     /* add carry */
+        answer = ~sum;                          /* truncate to 16 bits */
+        return(answer);
+}
+
 
 
 /*
@@ -232,5 +243,3 @@ int main(int argc, const char** argv){
 	report();
 
 }
-
-
