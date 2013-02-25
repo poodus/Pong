@@ -41,8 +41,10 @@ GetCurrentProcessID should be changed to an actual function
 #include <errno.h>
 #include <errno.h>
 #if __unix__
+#include <arpa/inet.h>
 #elif __WINDOWS__
 #include <Windows.h>
+#include <Winsock2.h>
 #endif
 
 /*
@@ -58,8 +60,8 @@ struct tagIPHeader
 	u_char timeToLive;
 	u_char protocol;
 	u_short checksum;
-	struct in_addr srcIpAddress;
-	struct in_addr destIpAddress;
+	struct in_addr sourceIPAddress;
+	struct in_addr destinationIPAddress;
 };
 /*
 	Address Info Struct
@@ -76,6 +78,9 @@ struct tagIPHeader
 	// struct addrinfo *ai_next; // linked list, next node
 // };
 
+
+
+
 /* 
 	ICMP HEADER 
 */
@@ -89,7 +94,7 @@ typedef struct tagICMPHeader{
 
 struct tagICMPEchoRequest{
 	tagICMPHeader icmpHeader;
-	int time;
+	time_t time;
 	//char charfillData[REQ_DATASIZE];
 	char charfillData[3];
 };
@@ -99,13 +104,8 @@ struct tagICMPEchoRequest{
 // tagICMPHeader ICMPHeader;
 tagICMPEchoRequest ICMPEchoRequest;
 addrinfo addressInfo;
+tagIPHeader IPHeader
 
-
-
-// union{
-	// tagIPHeader IPheader;
-	// tagICMPEchoRequest ICMPEchoRequest;
-// } packet;
 
 
 /*
@@ -177,14 +177,7 @@ void report()
 
 }
 
-/*
-	buildPing()
-*/
 
-void buildPing(int REQ_DATASIZE, int seq){
-	ICMPEchoRequest.icmpHeader.type='8';
-	ICMPEchoRequest.icmpHeader.code='0';
-}
 
 /*
 
@@ -220,7 +213,19 @@ static int in_cksum(u_short *addr, int len)
         return(answer);
 }
 
+/*
+	buildPing()
+*/
 
+void buildPing(int REQ_DATASIZE, int seq){
+	ICMPEchoRequest.icmpHeader.type='8';
+	ICMPEchoRequest.icmpHeader.code='0';
+	ICMPEchoRequest.icmpHeader.checksum= in_cksum( &addr, length);
+	ICMPEchoRequest.icmpHeader.sequenceNumber=seq;
+	ICMPEchoRequest.time=time(NULL);
+	seq++;
+	
+}
 
 /*
 
@@ -230,6 +235,12 @@ static int in_cksum(u_short *addr, int len)
 char *argv[2];
 int main(int argc, const char** argv){
 printf("Hello World\n");
+	void destinationIP;
+	#if __unix__
+	inet_pton(2,&destination,&IPHeader.destinationIPAddress);
+	#elif __WINDOWS__
+	InetPton(2,&destination,&IPHeader.destinationIPAddress);
+	#endif
 	int seq=0;
 	int REQ_DATASIZE=10;
 	int inSocketDescriptor;
