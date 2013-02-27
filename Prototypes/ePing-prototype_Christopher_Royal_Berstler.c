@@ -124,7 +124,7 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 	// echoRequest.time = gettime ...;
 
 	// Put data in packet and compute checksum
-	// echoRequest.icmpHeader.checksum = in_cksum(...);
+	ICMPEchoRequest.icmpHeader.checksum= in_cksum( &ICMPEchoRequest, sizeof(ICMPEchoRequest));
 	
 	// readfds.fd_count = 1; // set size
 	// readfds.fd_array[0] = raw; // socket set
@@ -135,10 +135,10 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 	//	errexit(perror("select() failed %d\n"));
 	//}
 	
-	/* blah = sendto(s, msg, len, flags, to, tolen) */
-	// sendto(socketDescriptor); // actually sends the packet
+	sentg = sendto(s, msg, len, flags, to, tolen);
 	
 	// Increment sequence number
+	ICMPEchoRequest.icmpHeader.sequenceNumber++;
 	
 }
 
@@ -222,12 +222,10 @@ static int in_cksum(u_short *addr, int len)
 void buildPing(int REQ_DATASIZE, int seq){
 	ICMPEchoRequest.icmpHeader.type='8';
 	ICMPEchoRequest.icmpHeader.code='0';
-	ICMPEchoRequest.icmpHeader.checksum= in_cksum( &ICMPEchoRequest, sizeof(ICMPEchoRequest));
 	ICMPEchoRequest.icmpHeader.sequenceNumber=seq;
 	ICMPEchoRequest.time=time(NULL);
 	IPHeader.protocol=1;
 	IPHeader.versionHeaderLength=4;
-	seq++;
 }
 
 /*
