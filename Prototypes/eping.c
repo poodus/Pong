@@ -232,12 +232,12 @@ char *argv[2];
 int main(int argc, const char** argv){
 printf("Hello World\n");
 	const char* destination="127.0.0.1";
-	char hostName[128];
-	gethostname(hostName,128);
+	char* hostName[128];
+	gethostname(*hostName,128);
 	struct hostent* hostIP;
-	hostIP=gethostbyname(hostName);
+	hostIP=gethostbyname(*hostName);
 	#if __unix__
-	inet_pton(2,hostIP.h_name+"",&IPHeader.sourceIPAddress);
+	inet_pton(2,*hostName,&IPHeader.sourceIPAddress);
 	if(inet_pton(2,destination,&IPHeader.destinationIPAddress)!=1){
 		// int error=WSAGetLastError();
 		// printf((char*)error);
@@ -249,7 +249,7 @@ printf("Hello World\n");
 		int error=WSAGetLastError();
 		printf((char*)error);
 	}
-	InetPton(2,hostIP,&IPHeader.sourceIPAddress);
+	InetPton(2,hostIP,*IPHeader.sourceIPAddress);
 	#endif
 	int seq=0;
 	int REQ_DATASIZE=10;
