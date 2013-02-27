@@ -32,7 +32,6 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <errno.h>
-#include <errno.h>
 #if __unix__
 #include <arpa/inet.h>
 #elif __WINDOWS__
@@ -220,7 +219,9 @@ void buildPing(int REQ_DATASIZE, int seq){
 	ICMPEchoRequest.icmpHeader.sequenceNumber=seq;
 	ICMPEchoRequest.time=time(NULL);
 	IPHeader.protocol=1;
-	IPHeader.versionHeaderLength=4;
+	// IPHeader.versionHeaderLength=4;
+	IPHeader.timeToLive=64;//Recommended value, according to the internet.
+	IPHeader.versionHeaderLength=0b01000101
 }
 
 /*
