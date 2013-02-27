@@ -34,6 +34,8 @@
 #include <errno.h>
 #if __unix__
 #include <arpa/inet.h>
+#include <time.h>
+
 #elif __WINDOWS__
 #include <windows.h>
 #include <winsock2.h>
@@ -217,7 +219,11 @@ void buildPing(int REQ_DATASIZE, int seq){
 	ICMPEchoRequest.icmpHeader.type='8';
 	ICMPEchoRequest.icmpHeader.code='0';
 	ICMPEchoRequest.icmpHeader.sequenceNumber=seq;
+	#if __unix__
+	time(&ICMPEchoRequest.time
+	#if __WINDOWS__
 	ICMPEchoRequest.time=time(NULL);
+	#endif
 	IPHeader.protocol=1;
 	// IPHeader.versionHeaderLength=4;
 	IPHeader.timeToLive=64;//Recommended value, according to the internet.
