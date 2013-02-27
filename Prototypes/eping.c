@@ -82,7 +82,8 @@ typedef struct tagICMPHeader{
 	u_short checksum;
 	u_short identifier;
 	u_short sequenceNumber;
-}icmpHeader;
+};
+tagICMPHeader icmpHeader;
 
 struct tagICMPEchoRequest{
 	tagICMPHeader icmpHeader;
@@ -106,7 +107,7 @@ int sent;
 
 in_cksum not from 
 */
-static int in_cksum(u_short *addr, int len)
+static int checksum(u_short *addr, int len)
 {
         register int nleft = len;
         register u_short *w = addr;
@@ -151,7 +152,7 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 	// echoRequest.time = gettime ...;
 
 	// Compute checksum
-	ICMPEchoRequest.icmpHeader.checksum= in_cksum((u_short *)icmpHeader, 30);
+	ICMPEchoRequest.icmpHeader.checksum = checksum((u_short *)icmpHeader, 30);
 	
 	// readfds.fd_count = 1; // set size
 	// readfds.fd_array[0] = raw; // socket set
