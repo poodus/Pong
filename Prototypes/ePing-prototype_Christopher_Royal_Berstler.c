@@ -27,7 +27,9 @@ GetCurrentProcessID should be changed to an actual function
 #include <sys/file.h>
 #include <sys/time.h>
 #include <sys/signal.h>
+#include <sys/unistd.h>
 
+#include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
@@ -43,8 +45,8 @@ GetCurrentProcessID should be changed to an actual function
 #if __unix__
 #include <arpa/inet.h>
 #elif __WINDOWS__
-#include <Windows.h>
-#include <Winsock2.h>
+#include <windows.h>
+#include <winsock2.h>
 #endif
 
 /*
@@ -104,7 +106,7 @@ struct tagICMPEchoRequest{
 // tagICMPHeader ICMPHeader;
 tagICMPEchoRequest ICMPEchoRequest;
 addrinfo addressInfo;
-tagIPHeader IPHeader
+tagIPHeader IPHeader;
 
 
 
@@ -220,11 +222,12 @@ static int in_cksum(u_short *addr, int len)
 void buildPing(int REQ_DATASIZE, int seq){
 	ICMPEchoRequest.icmpHeader.type='8';
 	ICMPEchoRequest.icmpHeader.code='0';
-	ICMPEchoRequest.icmpHeader.checksum= in_cksum( &addr, length);
+	ICMPEchoRequest.icmpHeader.checksum= in_cksum( &ICMPEchoRequest, sizeof(ICMPEchoRequest));
 	ICMPEchoRequest.icmpHeader.sequenceNumber=seq;
 	ICMPEchoRequest.time=time(NULL);
+	IPHeader.protocol=1;
+	IPHeader.versionHeaderLength=4;
 	seq++;
-	
 }
 
 /*
@@ -235,11 +238,25 @@ void buildPing(int REQ_DATASIZE, int seq){
 char *argv[2];
 int main(int argc, const char** argv){
 printf("Hello World\n");
-	void destinationIP;
+	const char* destination="127.0.0.1";
+	char hostName[128];
+	gethostname(hostName,128);
+	struct hostent* hostIP;
+	hostIP=gethostbyname(hostName);
 	#if __unix__
-	inet_pton(2,&destination,&IPHeader.destinationIPAddress);
+	inet_pton(2,hostIP.h_name+"",&IPHeader.sourceIPAddress);
+	if(inet_pton(2,destination,&IPHeader.destinationIPAddress)!=1){
+		// int error=WSAGetLastError();
+		// printf((char*)error);
+		//Add error message, etc.
+	};
 	#elif __WINDOWS__
-	InetPton(2,&destination,&IPHeader.destinationIPAddress);
+
+	if(InetPton(2,destination,&IPHeader.destinationIPAddress)!=1){
+		int error=WSAGetLastError();
+		printf((char*)error);
+	}
+	InetPton(2,hostIP,&IPHeader.sourceIPAddress);
 	#endif
 	int seq=0;
 	int REQ_DATASIZE=10;
