@@ -84,8 +84,9 @@ typedef struct tagICMPHeader{
 	u_short checksum;
 	u_short identifier;
 	u_short sequenceNumber;
-}icmpHeader;
+};
 
+tagICMPHeader icmpHeader;
 struct tagICMPEchoRequest{
 	tagICMPHeader icmpHeader;
 	time_t time;
@@ -95,7 +96,6 @@ struct tagICMPEchoRequest{
 /*
 	Initialize Structs
 */
-// tagICMPHeader ICMPHeader;
 tagICMPEchoRequest ICMPEchoRequest;
 addrinfo addressInfo;
 tagIPHeader IPHeader;
@@ -221,7 +221,7 @@ void buildPing(int REQ_DATASIZE, int seq){
 	ICMPEchoRequest.icmpHeader.sequenceNumber=seq;
 	#if __unix__
 	time(&ICMPEchoRequest.time
-	#if __WINDOWS__
+	#elif __WINDOWS__
 	ICMPEchoRequest.time=time(NULL);
 	#endif
 	IPHeader.protocol=1;
