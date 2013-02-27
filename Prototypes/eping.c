@@ -221,7 +221,7 @@ void buildPing(int REQ_DATASIZE, int seq){
 	IPHeader.protocol=1;
 	// IPHeader.versionHeaderLength=4;
 	IPHeader.timeToLive=64;//Recommended value, according to the internet.
-	IPHeader.versionHeaderLength=0b01000101
+	IPHeader.versionHeaderLength=0b01000101;
 }
 
 /*
