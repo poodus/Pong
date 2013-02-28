@@ -242,14 +242,17 @@ void buildPing(int REQ_DATASIZE, int seq){
 char *argv[2];
 int main(int argc, const char** argv){
 	printf("main() begin\n");
-	const char* destination="127.0.0.1";
-	char* hostName[128];
+	const char* destination="8.8.8.8";
+	char hostName[128];
 	printf("mark\n");
-	gethostname(*hostName,128);
+	if((gethostname(hostName, sizeof hostName))==NULL)
+	{
+		printf("gethostname error: returned null\n");
+	}
 	printf("mark\n");
 	hostent *hostIP;
 	printf("mark\n");
-	hostIP=gethostbyname(*hostName);
+	hostIP=gethostbyname(hostName);
 	printf("mark4\n");
 	struct in_addr destIP;
 	struct in_addr srcIP;
