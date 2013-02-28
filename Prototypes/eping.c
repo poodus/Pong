@@ -154,7 +154,7 @@ static int checksum(u_short *addr, int len)
 
 /*
 
-	Ping()
+	ping()
 
 */
 void ping(int socketDescriptor,int REQ_DATASIZE)
@@ -188,14 +188,39 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 
 /*
 
-	Listen()
+	listen()
 
 */
 void listen(int socketDescriptor)
 {
-	/* Wait for reply... or timeout */
+	// Setting some flags needed for select()
+	readfds.fd_count = 1; // Set # of sockets (I **think**)
+	readfds.fd_array[0] = raw; // Should be the sets of socket descriptors
+	timeout.tv_sec = 5; // timeout period, seconds (added second, if that matters)
+	timeout.tv_usec = 0; // timeuot period, microseconds 1,000,000 micro = second
 	
-	/* Receive reply */
+	char buf[512];
+	
+	// The following are functions we will probably need to use later
+	// On second thought, we recieve (ping) packets one at a time, not as a set. We may not need these after all.
+	// FD_SET(int fd, fd_set *set);		Add fd to the set
+	// FD_CLR(int fd, fd_set *set);		Remove fd to the set
+	// FD_ISSET(int fd, fd_set *set);	Returns trye if fd is in the set(probably won't use this one)
+	// FD_ZERO(fd_set *set);			Clears all entries from the set
+
+	rv = select(socketDescriptor + 1, &readfds, NULL, NULL, &timeout);
+	case(rv) 
+	{
+		case -1:
+			printf("Something terrible has happened! Error in select()");
+		case 0:
+			printf("I'm tired of waiting. Timeout occurred. Either timeout is too short or packet took too long to reply.");
+		default:
+			printf("(I think) this means we have a reply!");
+			if(FD_ISSET(socketDescriptor, &readfds) {
+				recvfrom(socketDescriptor, buf, sizeof buf, 0, 
+			}
+	}
 	
 	// Get the info out of it
 	
@@ -209,7 +234,7 @@ void listen(int socketDescriptor)
 
 /*
 
-	Report()
+	report()
 
 */
 void report()
@@ -239,13 +264,14 @@ void buildPing(int REQ_DATASIZE, int seq){
 	#endif
 	IPHeader.protocol=1;
 	// IPHeader.versionHeaderLength=4;
-	IPHeader.timeToLive=64;//Recommended value, according to the internet.
+	IPHeader.timeToLive = 64;//Recommended value, according to the internet.
 	IPHeader.versionHeaderLength=0b01000101;
+	printf("Buildping finished\n");
 }
 
 /*
 
-	Main()
+	main()
 
 */
 char *argv[2];
@@ -272,11 +298,12 @@ int main(int argc, const char** argv){
 	#if __unix__
 	printf("Mark 4.5\n");
 	inet_pton(AF_INET,hostIP->h_name,&srcIP);
-	printf("mark5\n");
+	printf("Mark 5\n");
 	if(inet_pton(AF_INET,destination,&IPHeader.destinationIPAddress)!=1){
 		// int error=WSAGetLastError();
 		// printf((char*)error);
 		//Add error message, etc.
+		printf("inet_pton error");
 	}
 	#elif __WINDOWS__
 
@@ -308,6 +335,3 @@ int main(int argc, const char** argv){
 	printf("main() end\n");
 
 }
-
-
-
