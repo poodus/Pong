@@ -130,6 +130,7 @@ static int checksum(u_short *addr, int len)
         while (nleft > 1)  {
 		
 		printf("Mark 2.5 Checksum\n");
+		std::cout<<&w<<std::endl;
                 sum += *w++;
 		printf("Mark 2.6 Checksum\n");
                 nleft -= 2;
