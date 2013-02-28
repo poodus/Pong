@@ -7,6 +7,8 @@
  *
 */
 
+//TODO remove this when debugging is done
+#include <iostream>
 
 /*
 *
@@ -149,8 +151,11 @@ static int checksum(u_short *addr, int len)
 */
 void ping(int socketDescriptor,int REQ_DATASIZE)
 {
+
+	printf("Mark 1 ping\n");
 	register struct tagICMPHeader *icmpHeader;
 	// Fill in some data to send
+	printf("Mark 2 ping\n");
 	memset(ICMPEchoRequest.charfillData, ' ', REQ_DATASIZE);
 
 	// Save tick count when sent (milliseconds)
@@ -158,8 +163,10 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 
 	// Compute checksum
 	ICMPEchoRequest.icmpHeader.checksum = checksum((u_short *)icmpHeader, 30);
+	printf("Mark 3 ping\n");
 	
 	sent = sendto(socketDescriptor, ICMPEchoRequest.charfillData, 30, 0, &whereto, sizeof(struct sockaddr));
+	printf("Mark 4 ping\n");
 	
 	// Increment sequence number
 	ICMPEchoRequest.icmpHeader.sequenceNumber++;
@@ -240,31 +247,44 @@ int main(int argc, const char** argv){
 	printf("mark\n");
 	gethostname(*hostName,128);
 	printf("mark\n");
-	struct hostent* hostIP;
+	hostent *hostIP;
 	printf("mark\n");
-	//SEG FAULT hostIP=gethostbyname(*hostName);
+	hostIP=gethostbyname(*hostName);
 	printf("mark4\n");
+	struct in_addr destIP;
+	struct in_addr srcIP;
+	std::cout<<sizeof(srcIP)<<std::endl;
+	IPHeader.sourceIPAddress=srcIP;
+	IPHeader.destinationIPAddress=destIP;
+	std::cout<<sizeof(IPHeader.sourceIPAddress)<<std::endl;
 	#if __unix__
-	inet_pton(2,*hostName,&IPHeader.sourceIPAddress);
+	printf("Mark 4.5\n");
+	inet_pton(AF_INET,hostIP->h_name,&srcIP);
 	printf("mark5\n");
-	if(inet_pton(2,destination,&IPHeader.destinationIPAddress)!=1){
+	if(inet_pton(AF_INET,destination,&IPHeader.destinationIPAddress)!=1){
 		// int error=WSAGetLastError();
 		// printf((char*)error);
 		//Add error message, etc.
 	}
 	#elif __WINDOWS__
 
+	printf("Mark 5\n");
 	if(InetPton(2,destination,&IPHeader.destinationIPAddress)!=1){
 		int error=WSAGetLastError();
 		printf((char*)error);
 	}
+
 	InetPton(2,hostIP,*IPHeader.sourceIPAddress);
 	#endif
+	printf("Mark 6\n");
 	int seq=0;
 	int REQ_DATASIZE=10;
 	int inSocketDescriptor;
 	int outSocketDescriptor;
+	
+	printf("Mark 7\n");
 	inSocketDescriptor=socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
+	printf("Mark 8\n");
 	outSocketDescriptor=socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	// Grab arguments from command line and set flags
 	// Number of Pings
