@@ -78,17 +78,13 @@ struct tagIPHeader
 /* 
 	ICMP HEADER 
 */
-typedef struct tagICMPHeader{
+struct tagICMPHeader{
 	u_char type;
 	u_char code;
 	u_short checksum;
 	u_short identifier;
 	u_short sequenceNumber;
 };
-<<<<<<< HEAD
-tagICMPHeader icmpHeader;
-=======
->>>>>>> 4cf066c2b385c2772c28e91e1c68c899ea50d481
 
 tagICMPHeader icmpHeader;
 struct tagICMPEchoRequest{
@@ -110,7 +106,10 @@ int sent;
 
 /*
 
-in_cksum not from 
+	Checksum()
+
+	Taken from Mike Musss' version of ping.c
+	from the public domain
 */
 static int checksum(u_short *addr, int len)
 {
@@ -150,6 +149,7 @@ static int checksum(u_short *addr, int len)
 */
 void ping(int socketDescriptor,int REQ_DATASIZE)
 {
+	register struct tagICMPHeader *icmpHeader;
 	// Fill in some data to send
 	memset(ICMPEchoRequest.charfillData, ' ', REQ_DATASIZE);
 
@@ -159,19 +159,12 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 	// Compute checksum
 	ICMPEchoRequest.icmpHeader.checksum = checksum((u_short *)icmpHeader, 30);
 	
-	// readfds.fd_count = 1; // set size
-	// readfds.fd_array[0] = raw; // socket set
-	// timeout.tv_sec = 10; // timeout (s)
-	// timeout.tv_usec = 0; // timeout (us)
-
-	//if((rc = select(1, &socketDescriptor, NULL, NULL, &timeout)) == SOCKET_ERROR){
-	//	errexit(perror("select() failed %d\n"));
-	//}
-	
-	sent = sendto(socketDescriptor, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", 30, void, &whereto, sizeof(struct sockaddr));
+	sent = sendto(socketDescriptor, ICMPEchoRequest.charfillData, 30, 0, &whereto, sizeof(struct sockaddr));
 	
 	// Increment sequence number
 	ICMPEchoRequest.icmpHeader.sequenceNumber++;
+	printf("PING");
+
 	
 }
 
@@ -224,7 +217,7 @@ void buildPing(int REQ_DATASIZE, int seq){
 	ICMPEchoRequest.icmpHeader.code='0';
 	ICMPEchoRequest.icmpHeader.sequenceNumber=seq;
 	#if __unix__
-	time(&ICMPEchoRequest.time
+	time(&ICMPEchoRequest.time);
 	#elif __WINDOWS__
 	ICMPEchoRequest.time=time(NULL);
 	#endif
@@ -241,7 +234,7 @@ void buildPing(int REQ_DATASIZE, int seq){
 */
 char *argv[2];
 int main(int argc, const char** argv){
-printf("Hello World\n");
+	printf("main() begin\n");
 	const char* destination="127.0.0.1";
 	char* hostName[128];
 	gethostname(*hostName,128);
@@ -275,6 +268,9 @@ printf("Hello World\n");
 	ping(outSocketDescriptor,REQ_DATASIZE);
 	listen(inSocketDescriptor);
 	report();
+	printf("main() end\n");
 
 }
+
+
 
