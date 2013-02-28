@@ -237,16 +237,21 @@ int main(int argc, const char** argv){
 	printf("main() begin\n");
 	const char* destination="127.0.0.1";
 	char* hostName[128];
+	printf("mark\n");
 	gethostname(*hostName,128);
+	printf("mark\n");
 	struct hostent* hostIP;
-	hostIP=gethostbyname(*hostName);
+	printf("mark\n");
+	//SEG FAULT hostIP=gethostbyname(*hostName);
+	printf("mark4\n");
 	#if __unix__
 	inet_pton(2,*hostName,&IPHeader.sourceIPAddress);
+	printf("mark5\n");
 	if(inet_pton(2,destination,&IPHeader.destinationIPAddress)!=1){
 		// int error=WSAGetLastError();
 		// printf((char*)error);
 		//Add error message, etc.
-	};
+	}
 	#elif __WINDOWS__
 
 	if(InetPton(2,destination,&IPHeader.destinationIPAddress)!=1){
