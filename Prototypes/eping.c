@@ -34,6 +34,8 @@
 #include <errno.h>
 #if __unix__
 #include <arpa/inet.h>
+#include <time.h>
+
 #elif __WINDOWS__
 #include <windows.h>
 #include <winsock2.h>
@@ -83,8 +85,12 @@ typedef struct tagICMPHeader{
 	u_short identifier;
 	u_short sequenceNumber;
 };
+<<<<<<< HEAD
 tagICMPHeader icmpHeader;
+=======
+>>>>>>> 4cf066c2b385c2772c28e91e1c68c899ea50d481
 
+tagICMPHeader icmpHeader;
 struct tagICMPEchoRequest{
 	tagICMPHeader icmpHeader;
 	time_t time;
@@ -94,7 +100,6 @@ struct tagICMPEchoRequest{
 /*
 	Initialize Structs
 */
-// tagICMPHeader ICMPHeader;
 tagICMPEchoRequest ICMPEchoRequest;
 addrinfo addressInfo;
 tagIPHeader IPHeader;
@@ -218,7 +223,11 @@ void buildPing(int REQ_DATASIZE, int seq){
 	ICMPEchoRequest.icmpHeader.type='8';
 	ICMPEchoRequest.icmpHeader.code='0';
 	ICMPEchoRequest.icmpHeader.sequenceNumber=seq;
+	#if __unix__
+	time(&ICMPEchoRequest.time
+	#elif __WINDOWS__
 	ICMPEchoRequest.time=time(NULL);
+	#endif
 	IPHeader.protocol=1;
 	// IPHeader.versionHeaderLength=4;
 	IPHeader.timeToLive=64;//Recommended value, according to the internet.
