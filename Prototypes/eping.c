@@ -130,8 +130,10 @@ static int checksum(u_short *addr, int len)
         while (nleft > 1)  {
 		
 		printf("Mark 2.5 Checksum\n");
-		std::cout<<&w<<std::endl;
-                sum += *w++;
+		std::cout<<w<<std::endl;
+                sum =sum+ *w;
+		printf("Mark 2.55 Checksum\n");
+				*w++;
 		printf("Mark 2.6 Checksum\n");
                 nleft -= 2;
         }
@@ -143,6 +145,7 @@ static int checksum(u_short *addr, int len)
                 sum += answer;
         }
 
+		printf("Mark 4 Checksum\n");
         /* add back carry outs from top 16 bits to low 16 bits */
         sum = (sum >> 16) + (sum & 0xffff);     /* add hi 16 to low 16 */
 		printf("Mark 4 Checksum\n");
@@ -194,12 +197,13 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 void listen(int socketDescriptor)
 {
 	// Setting some flags needed for select()
-	readfds.fd_count = 1; // Set # of sockets (I **think**)
-	readfds.fd_array[0] = raw; // Should be the sets of socket descriptors
-	timeout.tv_sec = 5; // timeout period, seconds (added second, if that matters)
-	timeout.tv_usec = 0; // timeuot period, microseconds 1,000,000 micro = second
 	
-	char buf[512];
+	// readfds.fd_count = 1; // Set # of sockets (I **think**)
+	// readfds.fd_array[0] = raw; // Should be the sets of socket descriptors
+	// timeout.tv_sec = 5; // timeout period, seconds (added second, if that matters)
+	// timeout.tv_usec = 0; // timeuot period, microseconds 1,000,000 micro = second
+	
+	// char buf[512];
 	
 	// The following are functions we will probably need to use later
 	// On second thought, we recieve (ping) packets one at a time, not as a set. We may not need these after all.
@@ -208,19 +212,19 @@ void listen(int socketDescriptor)
 	// FD_ISSET(int fd, fd_set *set);	Returns trye if fd is in the set(probably won't use this one)
 	// FD_ZERO(fd_set *set);			Clears all entries from the set
 
-	rv = select(socketDescriptor + 1, &readfds, NULL, NULL, &timeout);
-	case(rv) 
-	{
-		case -1:
-			printf("Something terrible has happened! Error in select()");
-		case 0:
-			printf("I'm tired of waiting. Timeout occurred. Either timeout is too short or packet took too long to reply.");
-		default:
-			printf("(I think) this means we have a reply!");
-			if(FD_ISSET(socketDescriptor, &readfds) {
-				recvfrom(socketDescriptor, buf, sizeof buf, 0, 
-			}
-	}
+	// rv = select(socketDescriptor + 1, &readfds, NULL, NULL, &timeout);
+	// case(rv) 
+	// {
+		// case -1:
+			// printf("Something terrible has happened! Error in select()");
+		// case 0:
+			// printf("I'm tired of waiting. Timeout occurred. Either timeout is too short or packet took too long to reply.");
+		// default:
+			// printf("(I think) this means we have a reply!");
+			// if(FD_ISSET(socketDescriptor, &readfds) {
+				// recvfrom(socketDescriptor, buf, sizeof buf, 0, 
+			// }
+	// }
 	
 	// Get the info out of it
 	
@@ -280,10 +284,12 @@ int main(int argc, const char** argv){
 	const char* destination="8.8.8.8";
 	char hostName[128];
 	printf("mark\n");
-	if((gethostname(hostName, sizeof hostName))==NULL)
+	gethostname(hostName, 128);
+	if((hostName)==NULL)
 	{
 		printf("gethostname error: returned null\n");
 	}
+	std::cout<<hostName<<std::endl;
 	printf("mark\n");
 	hostent *hostIP;
 	printf("mark\n");
