@@ -146,7 +146,7 @@ static int checksum(u_short *addr, int len)
 
 /*
 
-	Ping()
+	ping()
 
 */
 void ping(int socketDescriptor,int REQ_DATASIZE)
@@ -179,7 +179,7 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 
 /*
 
-	Listen()
+	listen()
 
 */
 void listen(int socketDescriptor)
@@ -200,7 +200,7 @@ void listen(int socketDescriptor)
 
 /*
 
-	Report()
+	report()
 
 */
 void report()
@@ -230,13 +230,14 @@ void buildPing(int REQ_DATASIZE, int seq){
 	#endif
 	IPHeader.protocol=1;
 	// IPHeader.versionHeaderLength=4;
-	IPHeader.timeToLive=64;//Recommended value, according to the internet.
+	IPHeader.timeToLive = 64;//Recommended value, according to the internet.
 	IPHeader.versionHeaderLength=0b01000101;
+	printf("Buildping finished\n");
 }
 
 /*
 
-	Main()
+	main()
 
 */
 char *argv[2];
@@ -263,11 +264,12 @@ int main(int argc, const char** argv){
 	#if __unix__
 	printf("Mark 4.5\n");
 	inet_pton(AF_INET,hostIP->h_name,&srcIP);
-	printf("mark5\n");
+	printf("Mark 5\n");
 	if(inet_pton(AF_INET,destination,&IPHeader.destinationIPAddress)!=1){
 		// int error=WSAGetLastError();
 		// printf((char*)error);
 		//Add error message, etc.
+		printf("inet_pton error");
 	}
 	#elif __WINDOWS__
 
@@ -299,6 +301,3 @@ int main(int argc, const char** argv){
 	printf("main() end\n");
 
 }
-
-
-
