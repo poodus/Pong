@@ -115,6 +115,7 @@ int sent;
 */
 static int checksum(u_short *addr, int len)
 {
+		printf("Mark 1 Checksum\n");
         register int nleft = len;
         register u_short *w = addr;
         register int sum = 0;
@@ -125,10 +126,15 @@ static int checksum(u_short *addr, int len)
          * sequential 16 bit words to it, and at the end, fold back all the
          * carry bits from the top 16 bits into the lower 16 bits.
          */
+		printf("Mark 2 Checksum\n");
         while (nleft > 1)  {
+		
+		printf("Mark 2.5 Checksum\n");
                 sum += *w++;
+		printf("Mark 2.6 Checksum\n");
                 nleft -= 2;
         }
+		printf("Mark 3 Checksum\n");
 
         /* mop up an odd byte, if necessary */
         if (nleft == 1) {
@@ -138,6 +144,7 @@ static int checksum(u_short *addr, int len)
 
         /* add back carry outs from top 16 bits to low 16 bits */
         sum = (sum >> 16) + (sum & 0xffff);     /* add hi 16 to low 16 */
+		printf("Mark 4 Checksum\n");
         sum += (sum >> 16);                     /* add carry */
         answer = ~sum;                          /* truncate to 16 bits */
         return(answer);
@@ -161,10 +168,11 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 	// Save tick count when sent (milliseconds)
 	// echoRequest.time = gettime ...;
 
+	printf("Mark 3 ping\n");
 	// Compute checksum
 	ICMPEchoRequest.icmpHeader.checksum = checksum((u_short *)icmpHeader, 30);
-	printf("Mark 3 ping\n");
 	
+	printf("Mark 3.5 ping\n");
 	sent = sendto(socketDescriptor, ICMPEchoRequest.charfillData, 30, 0, &whereto, sizeof(struct sockaddr));
 	printf("Mark 4 ping\n");
 	
