@@ -113,11 +113,11 @@ int sent;
 	Taken from Mike Musss' version of ping.c
 	from the public domain
 */
-static int checksum(u_short *addr, int len)
+static int checksum(u_short *ICMPHeader, int len)
 {
 		printf("Mark 1 Checksum\n");
         register int nleft = len;
-        register u_short *w = addr;
+        register u_short *ICMPPointer = ICMPHeader;
         register int sum = 0;
         u_short answer = 0;
 
@@ -128,20 +128,21 @@ static int checksum(u_short *addr, int len)
          */
 		printf("Mark 2 Checksum\n");
         while (nleft > 1)  {
-		
-		printf("Mark 2.5 Checksum\n");
-		std::cout<<w<<std::endl;
-                sum =sum+ *w;
-		printf("Mark 2.55 Checksum\n");
-				*w++;
-		printf("Mark 2.6 Checksum\n");
+				printf("Mark 2.5 Checksum\n");
+				// std::cout<<w<<std::endl;
+				printf("Mark 2.55 Checksum\n");
+				std::cout<<ICMPPointer<<std::endl;
+				printf("Mark 2.56 Checksum\n");
+                sum =sum+ *ICMPPointer;
+				printf("Mark 2.6 Checksum\n");
+				*ICMPPointer++;
                 nleft -= 2;
         }
 		printf("Mark 3 Checksum\n");
 
         /* mop up an odd byte, if necessary */
         if (nleft == 1) {
-                *(u_char *)(&answer) = *(u_char *)w ;
+                *(u_char *)(&answer) = *(u_char *)ICMPPointer ;
                 sum += answer;
         }
 
@@ -174,7 +175,7 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 
 	printf("Mark 3 ping\n");
 	// Compute checksum
-	ICMPEchoRequest.icmpHeader.checksum = checksum((u_short *)icmpHeader, 30);
+	ICMPEchoRequest.icmpHeader.checksum = checksum((u_short *)&ICMPEchoRequest, 30);
 	
 	printf("Mark 3.5 ping\n");
 	sent = sendto(socketDescriptor, ICMPEchoRequest.charfillData, 30, 0, &whereto, sizeof(struct sockaddr));
