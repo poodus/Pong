@@ -59,22 +59,6 @@ struct tagIPHeader
 	struct in_addr sourceIPAddress;
 	struct in_addr destinationIPAddress;
 };
-/*
-	Address Info Struct
-*/
-
-// struct addrinfo {
-	// int ai_flags; // AI_Passive
-	// int ai_family; // Inet? Inet6? Unspecified?
-	// int ai_socktype; // Stream or Datagram: SOCK_STREAM or SOCK_DIAGRAM
-	// int ai_protocol; //
-	// size_t ai_addrlen;  // Size of ai_addr in bytes
-	// struct sockaddr *ai_addr; // other struct
-	// char *ai_canonname; //full canonical hostname
-	// struct addrinfo *ai_next; // linked list, next node
-// };
-
-
 
 
 /* 
@@ -95,6 +79,12 @@ struct tagICMPEchoRequest{
 	//char charfillData[REQ_DATASIZE];
 	char charfillData[3];
 };
+
+/*Socket Address ipv4 */
+struct sockaddr_in socketAddress;
+struct in_addr destIP;
+struct in_addr srcIP;
+
 /*
 	Initialize Structs
 */
@@ -296,8 +286,6 @@ int main(int argc, const char** argv){
 	printf("mark\n");
 	hostIP=gethostbyname(hostName);
 	printf("mark4\n");
-	struct in_addr destIP;
-	struct in_addr srcIP;
 	std::cout<<sizeof(srcIP)<<std::endl;
 	IPHeader.sourceIPAddress=srcIP;
 	IPHeader.destinationIPAddress=destIP;
@@ -306,22 +294,32 @@ int main(int argc, const char** argv){
 	printf("Mark 4.5\n");
 	inet_pton(AF_INET,hostIP->h_name,&srcIP);
 	printf("Mark 5\n");
-	if(inet_pton(AF_INET,destination,&IPHeader.destinationIPAddress)!=1){
+	if(inet_pton(AF_INET,destination,&IPHeader.destinationIPAddress)!=1)
+	{
 		// int error=WSAGetLastError();
 		// printf((char*)error);
 		//Add error message, etc.
-		printf("inet_pton error");
+		printf("inet_pton error for IP Header\n");
+	}
+	if(inet_pton(AF_INET,destination,&socketAddress.sin_addr)!=1)
+	{
+		printf("inet_pton error for Socket Address\n");
 	}
 	#elif __WINDOWS__
 
 	printf("Mark 5\n");
-	if(InetPton(2,destination,&IPHeader.destinationIPAddress)!=1){
+	if(InetPton(AF_INET,destination,&IPHeader.destinationIPAddress)!=1)
+	{
 		int error=WSAGetLastError();
 		printf((char*)error);
 	}
-
-	InetPton(2,hostIP,*IPHeader.sourceIPAddress);
+	if(InetPton(AF_INET,destination,socketAddress.sin_addr)!=1)
+	{
+		printf("inet_pton error for Socket Address\n");
+	}
+	InetPton(AF_INET,hostIP,*IPHeader.sourceIPAddress);
 	#endif
+	printf("%u", IPHeader.destinationIPAddress.s_addr);
 	printf("Mark 6\n");
 	int seq=0;
 	int REQ_DATASIZE=10;
