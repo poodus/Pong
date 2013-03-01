@@ -128,13 +128,7 @@ static int checksum(u_short *ICMPHeader, int len)
          */
 		printf("Mark 2 Checksum\n");
         while (nleft > 1)  {
-				printf("Mark 2.5 Checksum\n");
-				// std::cout<<w<<std::endl;
-				printf("Mark 2.55 Checksum\n");
-				std::cout<<ICMPPointer<<std::endl;
-				printf("Mark 2.56 Checksum\n");
                 sum =sum+ *ICMPPointer;
-				printf("Mark 2.6 Checksum\n");
 				*ICMPPointer++;
                 nleft -= 2;
         }
