@@ -262,7 +262,6 @@ void buildPing(int REQ_DATASIZE, int seq){
 	ICMPEchoRequest.time=time(NULL);
 	#endif
 	IPHeader.protocol=1;
-	// IPHeader.versionHeaderLength=4;
 	IPHeader.timeToLive = 64;//Recommended value, according to the internet.
 	IPHeader.versionHeaderLength=0b01000101;
 	printf("Buildping finished\n");
