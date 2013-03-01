@@ -10,6 +10,7 @@
 //TODO remove this when debugging is done
 #include <iostream>
 
+
 /*
 *
 * Imports
@@ -72,12 +73,11 @@ struct tagICMPHeader{
 	u_short sequenceNumber;
 };
 
-tagICMPHeader icmpHeader;
+//tagICMPHeader icmpHeader;
 struct tagICMPEchoRequest{
 	tagICMPHeader icmpHeader;
 	time_t time;
-	//char charfillData[REQ_DATASIZE];
-	char charfillData[3];
+	char charfillData[20];
 };
 
 /*Socket Address ipv4 */
@@ -108,7 +108,7 @@ int sent;
 */
 static int checksum(u_short *ICMPHeader, int len)
 {
-		printf("Mark 1 Checksum\n");
+	printf("Mark 1 Checksum\n");
         register int nleft = len;
         register u_short *ICMPPointer = ICMPHeader;
         register int sum = 0;
@@ -119,19 +119,12 @@ static int checksum(u_short *ICMPHeader, int len)
          * sequential 16 bit words to it, and at the end, fold back all the
          * carry bits from the top 16 bits into the lower 16 bits.
          */
-		printf("Mark 2 Checksum\n");
         while (nleft > 1)  {
-				printf("Mark 2.5 Checksum\n");
-				// std::cout<<w<<std::endl;
-				printf("Mark 2.55 Checksum\n");
-				std::cout<<ICMPPointer<<std::endl;
-				printf("Mark 2.56 Checksum\n");
+
                 sum =sum+ *ICMPPointer;
-				printf("Mark 2.6 Checksum\n");
-				*ICMPPointer++;
+		*ICMPPointer++;
                 nleft -= 2;
         }
-		printf("Mark 3 Checksum\n");
 
         /* mop up an odd byte, if necessary */
         if (nleft == 1) {
@@ -139,13 +132,12 @@ static int checksum(u_short *ICMPHeader, int len)
                 sum += answer;
         }
 
-		printf("Mark 4 Checksum\n");
         /* add back carry outs from top 16 bits to low 16 bits */
         sum = (sum >> 16) + (sum & 0xffff);     /* add hi 16 to low 16 */
-		printf("Mark 4 Checksum\n");
         sum += (sum >> 16);                     /* add carry */
         answer = ~sum;                          /* truncate to 16 bits */
         return(answer);
+	printf("Checksum finished");
 }
 
 
@@ -156,24 +148,22 @@ static int checksum(u_short *ICMPHeader, int len)
 */
 void ping(int socketDescriptor,int REQ_DATASIZE)
 {
-
-	printf("Mark 1 ping\n");
+	register int lengthOfICMP = 56;
 	// Fill in some data to send
-	printf("Mark 2 ping\n");
-
-	// Save tick count when sent (milliseconds)
-	// echoRequest.time = gettime ...;
+	memset(ICMPEchoRequest.charfillData, 'A', REQ_DATASIZE);
 	
-	printf("Mark 3 ping\n");
+	// Save tick count when sent (milliseconds)
+	// echoRequest.time = gettime ...;	
+
 	// Compute checksum
-	ICMPEchoRequest.icmpHeader.checksum = checksum((u_short *)&ICMPEchoRequest, 30);
+	ICMPEchoRequest.icmpHeader.checksum = checksum((u_short *)&ICMPEchoRequest, lengthOfICMP);
 	//const sockaddr * address = (struct sockaddr_in *)&socketAddress;
-	printf("Mark 3.5 ping\n");
-	sent = sendto(socketDescriptor, ICMPEchoRequest.charfillData, 30, 0, &whereto, sizeof(struct sockaddr));
-	printf("Mark 4 ping\n");
+
+	sent = sendto(socketDescriptor, ICMPEchoRequest.charfillData, lengthOfICMP, 0, &whereto, sizeof(struct sockaddr));
 	
 	// Increment sequence number
 	ICMPEchoRequest.icmpHeader.sequenceNumber++;
+
 	printf("PING");
 
 	
@@ -259,17 +249,20 @@ void report()
 	buildPing()
 */
 
-void buildPing(int REQ_DATASIZE, int seq){
+void buildPing(int REQ_DATASIZE, int seq)
+{
 	register struct tagICMPHeader *icmpHeader;
 	ICMPEchoRequest.icmpHeader.type = 8;
 	ICMPEchoRequest.icmpHeader.code = 0;
 	ICMPEchoRequest.icmpHeader.sequenceNumber = seq;
+	// Fill packet
+	//memset(ICMPEchoRequest.icmp
 	#if __unix__
 	time(&ICMPEchoRequest.time);
 	#elif __WINDOWS__
-	ICMPEchoRequest.time=time(NULL);
+	ICMPEchoRequest.time = time(NULL);
 	#endif
-	IPHeader.protocol=1;
+	IPHeader.protocol = 1;
 	// IPHeader.versionHeaderLength=4;
 	IPHeader.timeToLive = 64;//Recommended value, according to the internet.
 	IPHeader.versionHeaderLength = 0b01000101;
@@ -282,9 +275,13 @@ void buildPing(int REQ_DATASIZE, int seq){
 
 */
 char *argv[2];
-int main(int argc, const char** argv){
+int main(int argc, const char** argv)
+{
+	// REMOVE THIS LATER
+	int REQ_DATASIZE =  20;
+	// STOP REMOVING
 	printf("main() begin\n");
-	const char* destination="8.8.8.8";
+	const char* destination="10.134.210.201";
 	char hostName[128];
 	printf("mark\n");
 	gethostname(hostName, 128);
@@ -336,7 +333,6 @@ int main(int argc, const char** argv){
 	printf("%u", IPHeader.destinationIPAddress.s_addr);
 	printf("Mark 6\n");
 	int seq=0;
-	int REQ_DATASIZE=10;
 	int inSocketDescriptor;
 	int outSocketDescriptor;
 	
