@@ -184,6 +184,7 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 */
 void listen(int socketDescriptor)
 {
+	/*
 	// Setting some flags needed for select()
 	readfds.fd_count = 1; // Set # of sockets (I **think**)
 	readfds.fd_array[0] = raw; // Should be the sets of socket descriptors
@@ -219,7 +220,6 @@ void listen(int socketDescriptor)
 	
 	/* Lost packets: was this packet in order with the sequence? */
 	
- 	
 }
 
 
