@@ -188,7 +188,7 @@ void listen(int socketDescriptor, sockaddr *fromWhom)
 	//readfds.fd_count = 1; // Set # of sockets (I **think**)
 	//readfds.fd_array[0] = raw; // Should be the sets of socket 
 	struct timeval timeout;
-	timeout.tv_sec = 5; // timeout period, seconds (added second, if that matters)
+	timeout.tv_sec = 2; // timeout period, seconds (added second, if that matters)
 	timeout.tv_usec = 0; // timeuot period, microseconds 1,000,000 micro = second
 	
 	socklen_t fromWhomLength;
