@@ -1,4 +1,4 @@
-notanotherping
+ePing
 ==============
 
 NDSU Capstone Project 2013
