@@ -113,10 +113,11 @@ int sent;
 	Taken from Mike Musss' version of ping.c
 	from the public domain
 */
-static int checksum(u_short *addr, int len)
+static int checksum(u_short *ICMPHeader, int len)
 {
+		printf("Mark 1 Checksum\n");
         register int nleft = len;
-        register u_short *w = addr;
+        register u_short *ICMPPointer = ICMPHeader;
         register int sum = 0;
         u_short answer = 0;
 
@@ -125,19 +126,30 @@ static int checksum(u_short *addr, int len)
          * sequential 16 bit words to it, and at the end, fold back all the
          * carry bits from the top 16 bits into the lower 16 bits.
          */
+		printf("Mark 2 Checksum\n");
         while (nleft > 1)  {
-                sum += *w++;
+				printf("Mark 2.5 Checksum\n");
+				// std::cout<<w<<std::endl;
+				printf("Mark 2.55 Checksum\n");
+				std::cout<<ICMPPointer<<std::endl;
+				printf("Mark 2.56 Checksum\n");
+                sum =sum+ *ICMPPointer;
+				printf("Mark 2.6 Checksum\n");
+				*ICMPPointer++;
                 nleft -= 2;
         }
+		printf("Mark 3 Checksum\n");
 
         /* mop up an odd byte, if necessary */
         if (nleft == 1) {
-                *(u_char *)(&answer) = *(u_char *)w ;
+                *(u_char *)(&answer) = *(u_char *)ICMPPointer ;
                 sum += answer;
         }
 
+		printf("Mark 4 Checksum\n");
         /* add back carry outs from top 16 bits to low 16 bits */
         sum = (sum >> 16) + (sum & 0xffff);     /* add hi 16 to low 16 */
+		printf("Mark 4 Checksum\n");
         sum += (sum >> 16);                     /* add carry */
         answer = ~sum;                          /* truncate to 16 bits */
         return(answer);
@@ -161,10 +173,11 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 	// Save tick count when sent (milliseconds)
 	// echoRequest.time = gettime ...;
 
-	// Compute checksum
-	ICMPEchoRequest.icmpHeader.checksum = checksum((u_short *)icmpHeader, 30);
 	printf("Mark 3 ping\n");
+	// Compute checksum
+	ICMPEchoRequest.icmpHeader.checksum = checksum((u_short *)&ICMPEchoRequest, 30);
 	
+	printf("Mark 3.5 ping\n");
 	sent = sendto(socketDescriptor, ICMPEchoRequest.charfillData, 30, 0, &whereto, sizeof(struct sockaddr));
 	printf("Mark 4 ping\n");
 	
@@ -186,12 +199,13 @@ void listen(int socketDescriptor)
 {
 	/*
 	// Setting some flags needed for select()
-	readfds.fd_count = 1; // Set # of sockets (I **think**)
-	readfds.fd_array[0] = raw; // Should be the sets of socket descriptors
-	timeout.tv_sec = 5; // timeout period, seconds (added second, if that matters)
-	timeout.tv_usec = 0; // timeuot period, microseconds 1,000,000 micro = second
 	
-	char buf[512];
+	// readfds.fd_count = 1; // Set # of sockets (I **think**)
+	// readfds.fd_array[0] = raw; // Should be the sets of socket descriptors
+	// timeout.tv_sec = 5; // timeout period, seconds (added second, if that matters)
+	// timeout.tv_usec = 0; // timeuot period, microseconds 1,000,000 micro = second
+	
+	// char buf[512];
 	
 	// The following are functions we will probably need to use later
 	// On second thought, we recieve (ping) packets one at a time, not as a set. We may not need these after all.
@@ -200,19 +214,19 @@ void listen(int socketDescriptor)
 	// FD_ISSET(int fd, fd_set *set);	Returns trye if fd is in the set(probably won't use this one)
 	// FD_ZERO(fd_set *set);			Clears all entries from the set
 
-	rv = select(socketDescriptor + 1, &readfds, NULL, NULL, &timeout);
-	case(rv) 
-	{
-		case -1:
-			printf("Something terrible has happened! Error in select()");
-		case 0:
-			printf("I'm tired of waiting. Timeout occurred. Either timeout is too short or packet took too long to reply.");
-		default:
-			printf("(I think) this means we have a reply!");
-			if(FD_ISSET(socketDescriptor, &readfds) {
-				recvfrom(socketDescriptor, buf, sizeof buf, 0, 
-			}
-	}
+	// rv = select(socketDescriptor + 1, &readfds, NULL, NULL, &timeout);
+	// case(rv) 
+	// {
+		// case -1:
+			// printf("Something terrible has happened! Error in select()");
+		// case 0:
+			// printf("I'm tired of waiting. Timeout occurred. Either timeout is too short or packet took too long to reply.");
+		// default:
+			// printf("(I think) this means we have a reply!");
+			// if(FD_ISSET(socketDescriptor, &readfds) {
+				// recvfrom(socketDescriptor, buf, sizeof buf, 0, 
+			// }
+	// }
 	
 	// Get the info out of it
 	
@@ -271,10 +285,12 @@ int main(int argc, const char** argv){
 	const char* destination="8.8.8.8";
 	char hostName[128];
 	printf("mark\n");
-	if((gethostname(hostName, sizeof hostName))==NULL)
+	gethostname(hostName, 128);
+	if((hostName)==NULL)
 	{
 		printf("gethostname error: returned null\n");
 	}
+	std::cout<<hostName<<std::endl;
 	printf("mark\n");
 	hostent *hostIP;
 	printf("mark\n");
