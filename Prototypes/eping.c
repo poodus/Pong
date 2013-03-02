@@ -185,17 +185,21 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 	listen()
 
 */
-void listen(int socketDescriptor)
+void listen(int socketDescriptor, sockaddr *fromWhom)
 {
-	/*
 	// Setting some flags needed for select()
 	
-	// readfds.fd_count = 1; // Set # of sockets (I **think**)
-	// readfds.fd_array[0] = raw; // Should be the sets of socket descriptors
-	// timeout.tv_sec = 5; // timeout period, seconds (added second, if that matters)
-	// timeout.tv_usec = 0; // timeuot period, microseconds 1,000,000 micro = second
+	fd_set readfds; //If this line doesn't work, try 'struct fd_set readfds', may additionally need preprocessor stuff
+	//readfds.fd_count = 1; // Set # of sockets (I **think**)
+	//readfds.fd_array[0] = raw; // Should be the sets of socket 
+	struct timeval timeout;
+	timeout.tv_sec = 5; // timeout period, seconds (added second, if that matters)
+	timeout.tv_usec = 0; // timeuot period, microseconds 1,000,000 micro = second
 	
-	// char buf[512];
+	socklen_t fromWhomLength;
+	fromWhomLength = sizeof fromWhom;
+	
+	char buf[512];
 	
 	// The following are functions we will probably need to use later
 	// On second thought, we recieve (ping) packets one at a time, not as a set. We may not need these after all.
@@ -203,20 +207,26 @@ void listen(int socketDescriptor)
 	// FD_CLR(int fd, fd_set *set);		Remove fd to the set
 	// FD_ISSET(int fd, fd_set *set);	Returns trye if fd is in the set(probably won't use this one)
 	// FD_ZERO(fd_set *set);			Clears all entries from the set
-
-	// rv = select(socketDescriptor + 1, &readfds, NULL, NULL, &timeout);
-	// case(rv) 
-	// {
-		// case -1:
-			// printf("Something terrible has happened! Error in select()");
-		// case 0:
-			// printf("I'm tired of waiting. Timeout occurred. Either timeout is too short or packet took too long to reply.");
-		// default:
-			// printf("(I think) this means we have a reply!");
-			// if(FD_ISSET(socketDescriptor, &readfds) {
-				// recvfrom(socketDescriptor, buf, sizeof buf, 0, 
-			// }
-	// }
+	int rv;
+	printf("Listening...");
+	rv = select(socketDescriptor + 1, &readfds, NULL, NULL, &timeout);
+	if(rv == -1) 
+	{
+		printf("Something terrible has happened! Error in select()\n");
+	}
+	else if(rv == 0)
+	{
+		printf("I'm tired of waiting. Timeout occurred. Packet took too long to reply.\n");
+	}
+	else
+	{
+		printf("(I think) this means we have a reply!\n");
+		if(FD_ISSET(socketDescriptor, &readfds))
+		{
+			recvfrom(socketDescriptor, buf, sizeof buf, 0, fromWhom, &fromWhomLength);
+			printf("Packet receieved! (probably)\n");
+		}
+	}
 	
 	// Get the info out of it
 	
@@ -335,7 +345,8 @@ int main(int argc, const char** argv){
 	// Packet Size
 	buildPing(REQ_DATASIZE,seq);
 	ping(outSocketDescriptor,REQ_DATASIZE);
-	listen(inSocketDescriptor);
+	printf("I'm about to call listen()!\n");
+	listen(inSocketDescriptor, &whereto);
 	report();
 	printf("main() end\n");
 
