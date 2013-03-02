@@ -81,9 +81,12 @@ struct tagICMPEchoRequest{
 };
 
 /*Socket Address ipv4 */
-struct sockaddr_in socketAddress;
+struct sockaddr_in *socketAddress;
+struct sockaddr whereto;
+
 struct in_addr destIP;
 struct in_addr srcIP;
+
 
 /*
 	Initialize Structs
@@ -91,7 +94,7 @@ struct in_addr srcIP;
 tagICMPEchoRequest ICMPEchoRequest;
 addrinfo addressInfo;
 tagIPHeader IPHeader;
-struct sockaddr whereto;
+
 // Variable to see if the packet was sent
 int sent;
 
@@ -155,18 +158,16 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 {
 
 	printf("Mark 1 ping\n");
-	register struct tagICMPHeader *icmpHeader;
 	// Fill in some data to send
 	printf("Mark 2 ping\n");
-	memset(ICMPEchoRequest.charfillData, ' ', REQ_DATASIZE);
 
 	// Save tick count when sent (milliseconds)
 	// echoRequest.time = gettime ...;
-
+	
 	printf("Mark 3 ping\n");
 	// Compute checksum
 	ICMPEchoRequest.icmpHeader.checksum = checksum((u_short *)&ICMPEchoRequest, 30);
-	
+	//const sockaddr * address = (struct sockaddr_in *)&socketAddress;
 	printf("Mark 3.5 ping\n");
 	sent = sendto(socketDescriptor, ICMPEchoRequest.charfillData, 30, 0, &whereto, sizeof(struct sockaddr));
 	printf("Mark 4 ping\n");
@@ -259,9 +260,10 @@ void report()
 */
 
 void buildPing(int REQ_DATASIZE, int seq){
-	ICMPEchoRequest.icmpHeader.type='8';
-	ICMPEchoRequest.icmpHeader.code='0';
-	ICMPEchoRequest.icmpHeader.sequenceNumber=seq;
+	register struct tagICMPHeader *icmpHeader;
+	ICMPEchoRequest.icmpHeader.type = 8;
+	ICMPEchoRequest.icmpHeader.code = 0;
+	ICMPEchoRequest.icmpHeader.sequenceNumber = seq;
 	#if __unix__
 	time(&ICMPEchoRequest.time);
 	#elif __WINDOWS__
@@ -270,7 +272,7 @@ void buildPing(int REQ_DATASIZE, int seq){
 	IPHeader.protocol=1;
 	// IPHeader.versionHeaderLength=4;
 	IPHeader.timeToLive = 64;//Recommended value, according to the internet.
-	IPHeader.versionHeaderLength=0b01000101;
+	IPHeader.versionHeaderLength = 0b01000101;
 	printf("Buildping finished\n");
 }
 
@@ -296,14 +298,16 @@ int main(int argc, const char** argv){
 	printf("mark\n");
 	hostIP=gethostbyname(hostName);
 	printf("mark4\n");
-	std::cout<<sizeof(srcIP)<<std::endl;
+	//std::cout<<srcIP<<std::endl;
+	printf("\n");
 	IPHeader.sourceIPAddress=srcIP;
 	IPHeader.destinationIPAddress=destIP;
 	std::cout<<sizeof(IPHeader.sourceIPAddress)<<std::endl;
 	#if __unix__
 	printf("Mark 4.5\n");
 	inet_pton(AF_INET,hostIP->h_name,&srcIP);
-	printf("Mark 5\n");
+	printf("Mark 5 (unix)\n");
+	socketAddress = (struct sockaddr_in *)&whereto;
 	if(inet_pton(AF_INET,destination,&IPHeader.destinationIPAddress)!=1)
 	{
 		// int error=WSAGetLastError();
@@ -311,19 +315,19 @@ int main(int argc, const char** argv){
 		//Add error message, etc.
 		printf("inet_pton error for IP Header\n");
 	}
-	if(inet_pton(AF_INET,destination,&socketAddress.sin_addr)!=1)
+	if(inet_pton(AF_INET,destination,&(socketAddress->sin_addr))!=1)
 	{
 		printf("inet_pton error for Socket Address\n");
 	}
 	#elif __WINDOWS__
 
-	printf("Mark 5\n");
+	printf("Mark 5 (win)\n");
 	if(InetPton(AF_INET,destination,&IPHeader.destinationIPAddress)!=1)
 	{
 		int error=WSAGetLastError();
 		printf((char*)error);
 	}
-	if(InetPton(AF_INET,destination,socketAddress.sin_addr)!=1)
+	if(InetPton(AF_INET,destination,&(socketAddress->sin_addr))!=1)
 	{
 		printf("inet_pton error for Socket Address\n");
 	}
