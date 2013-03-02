@@ -73,14 +73,8 @@ struct tagICMPHeader{
 	u_short sequenceNumber;
 };
 
-//tagICMPHeader icmpHeader;
-struct tagICMPEchoRequest{
-	tagICMPHeader icmpHeader;
-	time_t time;
-	char charfillData[20];
-};
 
-/*Socket Address ipv4 */
+/* Socket Address ipv4 */
 struct sockaddr_in *socketAddress;
 struct sockaddr whereto;
 
@@ -91,9 +85,10 @@ struct in_addr srcIP;
 /*
 	Initialize Structs
 */
-tagICMPEchoRequest ICMPEchoRequest;
-addrinfo addressInfo;
+
 tagIPHeader IPHeader;
+tagICMPHeader * icmpHeader;
+u_char outpack[100];
 
 // Variable to see if the packet was sent
 int sent;
@@ -105,10 +100,12 @@ int sent;
 
 	Taken from Mike Musss' version of ping.c
 	from the public domain
+
 */
+
 static int checksum(u_short *ICMPHeader, int len)
 {
-	printf("Mark 1 Checksum\n");
+	printf("checksum() begin\n");
         register int nleft = len;
         register u_short *ICMPPointer = ICMPHeader;
         register int sum = 0;
@@ -121,7 +118,7 @@ static int checksum(u_short *ICMPHeader, int len)
          */
         while (nleft > 1)  {
 
-                sum =sum+ *ICMPPointer;
+                sum = sum+ *ICMPPointer;
 		*ICMPPointer++;
                 nleft -= 2;
         }
@@ -137,7 +134,7 @@ static int checksum(u_short *ICMPHeader, int len)
         sum += (sum >> 16);                     /* add carry */
         answer = ~sum;                          /* truncate to 16 bits */
         return(answer);
-	printf("Checksum finished");
+	printf("checksum() end");
 }
 
 
@@ -148,24 +145,32 @@ static int checksum(u_short *ICMPHeader, int len)
 */
 void ping(int socketDescriptor,int REQ_DATASIZE)
 {
-	register int lengthOfICMP = 56;
+	printf("ping() begin\n");
 	// Fill in some data to send
-	memset(ICMPEchoRequest.charfillData, 'A', REQ_DATASIZE);
+	//memset(ICMPEchoRequest.charfillData, 'A', REQ_DATASIZE);
 	
 	// Save tick count when sent (milliseconds)
-	// echoRequest.time = gettime ...;	
 
 	// Compute checksum
-	ICMPEchoRequest.icmpHeader.checksum = checksum((u_short *)&ICMPEchoRequest, lengthOfICMP);
-	//const sockaddr * address = (struct sockaddr_in *)&socketAddress;
+	icmpHeader->checksum = checksum((u_short *)&icmpHeader, REQ_DATASIZE);
 
-	sent = sendto(socketDescriptor, ICMPEchoRequest.charfillData, lengthOfICMP, 0, &whereto, sizeof(struct sockaddr));
+	// Send the packet
+	sent = sendto(socketDescriptor, (char *)outpack, REQ_DATASIZE, 0, &whereto, sizeof(struct sockaddr));
 	
-	// Increment sequence number
-	ICMPEchoRequest.icmpHeader.sequenceNumber++;
+	// Increment packet sequence number
+	icmpHeader->sequenceNumber++;
 
-	printf("PING");
-
+	// Print out if the packet sent or not
+	if(sent > 0)
+	{
+		printf("Ping sent!\n");
+	}
+	else
+	{
+		printf("Ping not sent.\n");
+	}
+	
+	printf("ping() end\n");
 	
 }
 
@@ -246,27 +251,30 @@ void report()
 
 
 /*
+
 	buildPing()
+
 */
 
 void buildPing(int REQ_DATASIZE, int seq)
 {
-	register struct tagICMPHeader *icmpHeader;
-	ICMPEchoRequest.icmpHeader.type = 8;
-	ICMPEchoRequest.icmpHeader.code = 0;
-	ICMPEchoRequest.icmpHeader.sequenceNumber = seq;
+	printf("buildPing() begin\n");
+	icmpHeader = (struct tagICMPHeader *)outpack;
+	//register struct tagICMPHeader *icmpHeader;
+	icmpHeader->type = 8;
+	icmpHeader->code = 0;
+	icmpHeader->sequenceNumber = seq;
 	// Fill packet
-	//memset(ICMPEchoRequest.icmp
 	#if __unix__
-	time(&ICMPEchoRequest.time);
+	//time(&ICMPEchoRequest.time);
 	#elif __WINDOWS__
-	ICMPEchoRequest.time = time(NULL);
+	//ICMPEchoRequest.time = time(NULL);
 	#endif
 	IPHeader.protocol = 1;
 	// IPHeader.versionHeaderLength=4;
 	IPHeader.timeToLive = 64;//Recommended value, according to the internet.
 	IPHeader.versionHeaderLength = 0b01000101;
-	printf("Buildping finished\n");
+	printf("buildPing() end\n");
 }
 
 /*
@@ -278,47 +286,44 @@ char *argv[2];
 int main(int argc, const char** argv)
 {
 	// REMOVE THIS LATER
-	int REQ_DATASIZE =  20;
+	int REQ_DATASIZE =  50;
 	// STOP REMOVING
 	printf("main() begin\n");
-	const char* destination="10.134.210.201";
+	const char* destination="127.0.0.1";
 	char hostName[128];
-	printf("mark\n");
+	printf("main() mark 1\n");
 	gethostname(hostName, 128);
 	if((hostName)==NULL)
 	{
 		printf("gethostname error: returned null\n");
 	}
-	std::cout<<hostName<<std::endl;
-	printf("mark\n");
+	printf("main() mark 2\n");
 	hostent *hostIP;
-	printf("mark\n");
+	printf("main() mark 3\n");
 	hostIP=gethostbyname(hostName);
-	printf("mark4\n");
-	//std::cout<<srcIP<<std::endl;
-	printf("\n");
+	printf("main() mark 4\n");
 	IPHeader.sourceIPAddress=srcIP;
 	IPHeader.destinationIPAddress=destIP;
-	std::cout<<sizeof(IPHeader.sourceIPAddress)<<std::endl;
+
 	#if __unix__
-	printf("Mark 4.5\n");
+	printf("main() mark 4.5\n");
 	inet_pton(AF_INET,hostIP->h_name,&srcIP);
-	printf("Mark 5 (unix)\n");
+	printf("main() mark 5 (unix)\n");
 	socketAddress = (struct sockaddr_in *)&whereto;
 	if(inet_pton(AF_INET,destination,&IPHeader.destinationIPAddress)!=1)
 	{
 		// int error=WSAGetLastError();
 		// printf((char*)error);
-		//Add error message, etc.
+		// Add error message, etc.
 		printf("inet_pton error for IP Header\n");
 	}
 	if(inet_pton(AF_INET,destination,&(socketAddress->sin_addr))!=1)
 	{
 		printf("inet_pton error for Socket Address\n");
 	}
-	#elif __WINDOWS__
 
-	printf("Mark 5 (win)\n");
+	#elif __WINDOWS__
+	printf("main() mark 5 (windows)\n");
 	if(InetPton(AF_INET,destination,&IPHeader.destinationIPAddress)!=1)
 	{
 		int error=WSAGetLastError();
@@ -330,19 +335,15 @@ int main(int argc, const char** argv)
 	}
 	InetPton(AF_INET,hostIP,*IPHeader.sourceIPAddress);
 	#endif
-	printf("%u", IPHeader.destinationIPAddress.s_addr);
-	printf("Mark 6\n");
+
+	printf("main() mark 6\n");
 	int seq=0;
 	int inSocketDescriptor;
 	int outSocketDescriptor;
-	
-	printf("Mark 7\n");
+	printf("main() mark 7\n");
 	inSocketDescriptor=socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
-	printf("Mark 8\n");
+	printf("main() mark 8\n");
 	outSocketDescriptor=socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
-	// Grab arguments from command line and set flags
-	// Number of Pings
-	// Packet Size
 	buildPing(REQ_DATASIZE,seq);
 	ping(outSocketDescriptor,REQ_DATASIZE);
 	printf("I'm about to call listen()!\n");
@@ -351,3 +352,4 @@ int main(int argc, const char** argv)
 	printf("main() end\n");
 
 }
+
