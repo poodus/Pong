@@ -117,6 +117,7 @@ static int checksum(u_short *ICMPHeader, int len)
         sum += (sum >> 16);                     /* add carry */
         answer = ~sum;                          /* truncate to 16 bits */
         printf("checksum() end\n");
+        printf("------------------\n");
         return(answer);
 	
 }
@@ -156,6 +157,7 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 	}
 	
 	printf("ping() end\n");
+	printf("------------------\n");
 	
 }
 
@@ -168,6 +170,7 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 */
 void listen(int socketDescriptor, sockaddr *fromWhom)
 {
+	printf("listen() begin\n");
 	// Setting some flags needed for select()
 	
 	fd_set readfds; //If this line doesn't work, try 'struct fd_set readfds', may additionally need preprocessor stuff
@@ -208,6 +211,8 @@ void listen(int socketDescriptor, sockaddr *fromWhom)
 			printf("Packet receieved! (probably)\n");
 		}
 	}
+	printf("listen() end\n");
+	printf("------------------\n");
 	
 	// Get the info out of it
 	
@@ -260,6 +265,7 @@ void buildPing(int REQ_DATASIZE, int seq)
 	IPHeader.timeToLive = 64;//Recommended value, according to the internet.
 	// IPHeader.versionHeaderLength = 0b01000101;
 	printf("buildPing() end\n");
+	printf("------------------\n");
 }
 
 /*
@@ -270,15 +276,16 @@ void buildPing(int REQ_DATASIZE, int seq)
 char *argv[2];
 int main(int argc, const char** argv)
 {
+	printf("------------------\n");
 	// REMOVE THIS LATER
-	int REQ_DATASIZE =  50;
+	int REQ_DATASIZE = 50;
 	// STOP REMOVING
 	printf("main() begin\n");
-	const char* destination="8.8.8.";
+	const char* destination = "8.8.8.8";
 	char hostName[128];
 	printf("main() mark 1\n");
 	gethostname(hostName, 128);
-	if((hostName)==NULL)
+	if((hostName) == NULL)
 	{
 		printf("gethostname error: returned null\n");
 	}
@@ -332,10 +339,9 @@ int main(int argc, const char** argv)
 	outSocketDescriptor=socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	buildPing(REQ_DATASIZE,seq);
 	ping(outSocketDescriptor,REQ_DATASIZE);
-	printf("I'm about to call listen()!\n");
 	listen(inSocketDescriptor, &whereto);
 	report();
 	printf("main() end\n");
-
+	printf("------------------\n");
 }
 
