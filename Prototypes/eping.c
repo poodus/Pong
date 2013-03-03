@@ -61,38 +61,22 @@ struct tagIPHeader
 	struct in_addr destinationIPAddress;
 };
 
-
-/* 
-	ICMP HEADER 
-*/
-struct tagICMPHeader{
-	u_char type;
-	u_char code;
-	u_short checksum;
-	u_short identifier;
-	u_short sequenceNumber;
-};
-
-
-/* Socket Address ipv4 */
-struct sockaddr_in *socketAddress;
-struct sockaddr whereto;
-
-struct in_addr destIP;
-struct in_addr srcIP;
-
-
 /*
 	Initialize Structs
 */
 
+struct sockaddr_in *socketAddress;
+struct sockaddr whereto;
+struct in_addr destIP;
+struct in_addr srcIP;
+struct icmp * icmpHeader;
 tagIPHeader IPHeader;
-tagICMPHeader * icmpHeader;
 u_char outpack[100];
 
 // Variable to see if the packet was sent
 int sent;
 
+static int ident;
 
 /*
 
@@ -118,14 +102,13 @@ static int checksum(u_short *ICMPHeader, int len)
          */
         while (nleft > 1)  {
 
-            sum = sum+ *ICMPPointer;
-			*ICMPPointer++;
+            sum += *ICMPPointer;
             nleft -= 2;
         }
 
         /* mop up an odd byte, if necessary */
         if (nleft == 1) {
-                *(u_char *)(&answer) = *(u_char *)ICMPPointer ;
+                *(u_char *)(&answer) = *(u_char *)ICMPPointer;
                 sum += answer;
         }
 
@@ -133,8 +116,9 @@ static int checksum(u_short *ICMPHeader, int len)
         sum = (sum >> 16) + (sum & 0xffff);     /* add hi 16 to low 16 */
         sum += (sum >> 16);                     /* add carry */
         answer = ~sum;                          /* truncate to 16 bits */
+        printf("checksum() end\n");
         return(answer);
-	printf("checksum() end");
+	
 }
 
 
@@ -146,19 +130,20 @@ static int checksum(u_short *ICMPHeader, int len)
 void ping(int socketDescriptor,int REQ_DATASIZE)
 {
 	printf("ping() begin\n");
+	register int cc = 56;
+
 	// Fill in some data to send
-	//memset(ICMPEchoRequest.charfillData, 'A', REQ_DATASIZE);
 	
 	// Save tick count when sent (milliseconds)
 
 	// Compute checksum
-	icmpHeader->checksum = checksum((u_short *)&icmpHeader, REQ_DATASIZE);
+	icmpHeader->icmp_cksum = checksum((u_short *)&icmpHeader, cc);
 
 	// Send the packet
-	sent = sendto(socketDescriptor, (char *)outpack, REQ_DATASIZE, 0, &whereto, sizeof(struct sockaddr));
+	sent = sendto(socketDescriptor, (char *)outpack, cc, 0, &whereto, sizeof(struct sockaddr));
 	
 	// Increment packet sequence number
-	icmpHeader->sequenceNumber++;
+	icmpHeader->icmp_seq++;
 
 	// Print out if the packet sent or not
 	if(sent > 0)
@@ -255,15 +240,15 @@ void report()
 	buildPing()
 
 */
-
 void buildPing(int REQ_DATASIZE, int seq)
 {
 	printf("buildPing() begin\n");
-	icmpHeader = (struct tagICMPHeader *)outpack;
-	//register struct tagICMPHeader *icmpHeader;
-	icmpHeader->type = 8;
-	icmpHeader->code = 0;
-	icmpHeader->sequenceNumber = seq;
+	icmpHeader = (struct icmp *)outpack;
+	icmpHeader->icmp_type = 8;
+	icmpHeader->icmp_code = 0;
+	icmpHeader->icmp_cksum = 0;
+	icmpHeader->icmp_seq = seq;
+	icmpHeader->icmp_id = ident;
 	// Fill packet
 	#if __unix__
 	//time(&ICMPEchoRequest.time);
@@ -271,9 +256,9 @@ void buildPing(int REQ_DATASIZE, int seq)
 	//ICMPEchoRequest.time = time(NULL);
 	#endif
 	IPHeader.protocol = 1;
-	// IPHeader.versionHeaderLength=4;
+	IPHeader.versionHeaderLength = sizeof(struct tagIPHeader) >> 2;
 	IPHeader.timeToLive = 64;//Recommended value, according to the internet.
-	IPHeader.versionHeaderLength = 0b01000101;
+	// IPHeader.versionHeaderLength = 0b01000101;
 	printf("buildPing() end\n");
 }
 
@@ -289,7 +274,7 @@ int main(int argc, const char** argv)
 	int REQ_DATASIZE =  50;
 	// STOP REMOVING
 	printf("main() begin\n");
-	const char* destination="127.0.0.1";
+	const char* destination="8.8.8.";
 	char hostName[128];
 	printf("main() mark 1\n");
 	gethostname(hostName, 128);
@@ -302,8 +287,8 @@ int main(int argc, const char** argv)
 	printf("main() mark 3\n");
 	hostIP=gethostbyname(hostName);
 	printf("main() mark 4\n");
-	IPHeader.sourceIPAddress=srcIP;
-	IPHeader.destinationIPAddress=destIP;
+	IPHeader.sourceIPAddress = srcIP;
+	IPHeader.destinationIPAddress = destIP;
 
 	#if __unix__
 	printf("main() mark 4.5\n");
@@ -337,7 +322,8 @@ int main(int argc, const char** argv)
 	#endif
 
 	printf("main() mark 6\n");
-	int seq=0;
+	int seq = 0;
+	int ident = getpid() & 0xFFFF;
 	int inSocketDescriptor;
 	int outSocketDescriptor;
 	printf("main() mark 7\n");
