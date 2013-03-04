@@ -61,16 +61,33 @@ struct tagIPHeader
 	struct in_addr destinationIPAddress;
 };
 
+
+/* 
+	ICMP HEADER 
+*/
+struct tagICMPHeader{
+	u_char type;
+	u_char code;
+	u_short checksum;
+	u_short identifier;
+	u_short sequenceNumber;
+};
+
+
+/* Socket Address ipv4 */
+struct sockaddr_in *socketAddress;
+struct sockaddr whereto;
+
+struct in_addr destIP;
+struct in_addr srcIP;
+
+
 /*
 	Initialize Structs
 */
 
-struct sockaddr_in *socketAddress;
-struct sockaddr whereto;
-struct in_addr destIP;
-struct in_addr srcIP;
-struct icmp * icmpHeader;
 tagIPHeader IPHeader;
+tagICMPHeader * icmpHeader;
 u_char outpack[100];
 
 // Variable to see if the packet was sent
@@ -131,9 +148,8 @@ static int checksum(u_short *ICMPHeader, int len)
 void ping(int socketDescriptor,int REQ_DATASIZE)
 {
 	printf("ping() begin\n");
-	register int cc = 56;
-
 	// Fill in some data to send
+	//memset(ICMPEchoRequest.charfillData, 'A', REQ_DATASIZE);
 	
 	// Save tick count when sent (milliseconds)
 
@@ -245,6 +261,7 @@ void report()
 	buildPing()
 
 */
+
 void buildPing(int REQ_DATASIZE, int seq)
 {
 	printf("buildPing() begin\n");
@@ -263,9 +280,8 @@ void buildPing(int REQ_DATASIZE, int seq)
 	IPHeader.protocol = 1;
 	IPHeader.versionHeaderLength = sizeof(struct tagIPHeader) >> 2;
 	IPHeader.timeToLive = 64;//Recommended value, according to the internet.
-	// IPHeader.versionHeaderLength = 0b01000101;
+	IPHeader.versionHeaderLength = 0b01000101;
 	printf("buildPing() end\n");
-	printf("------------------\n");
 }
 
 /*
@@ -278,10 +294,10 @@ int main(int argc, const char** argv)
 {
 	printf("------------------\n");
 	// REMOVE THIS LATER
-	int REQ_DATASIZE = 50;
+	int REQ_DATASIZE =  50;
 	// STOP REMOVING
 	printf("main() begin\n");
-	const char* destination = "8.8.8.8";
+	//const char* destination="127.0.0.1";
 	char hostName[128];
 	printf("main() mark 1\n");
 	gethostname(hostName, 128);
