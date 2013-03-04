@@ -250,7 +250,7 @@ void buildPing(int REQ_DATASIZE, int seq)
 {
 	printf("buildPing() begin\n");
 	icmpHeader = (struct icmp *)outpack;
-	icmpHeader->icmp_type = htons(8);
+	icmpHeader->icmp_type = 8;
 	icmpHeader->icmp_code = 0;
 	icmpHeader->icmp_cksum = 0;
 	icmpHeader->icmp_seq = htons(seq);
