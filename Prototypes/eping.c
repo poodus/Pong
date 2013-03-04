@@ -119,7 +119,6 @@ static int checksum(u_short *ICMPHeader, int len)
         printf("checksum() end\n");
         printf("------------------\n");
         return(answer);
-	
 }
 
 
