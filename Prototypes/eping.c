@@ -280,7 +280,154 @@ int main(int argc, const char** argv)
 	const int REQ_DATASIZE = 50;
 	// STOP REMOVING
 	printf("main() begin\n");
-	const char* destination = "8.8.8.8";
+	
+	printf("argc = %d\n", argc);\
+	//const char* flag[2];
+	
+	const char* destination = argv[1];
+	bool timeBetweenReq; // -q
+	bool timeBetweenRepReq; // -b
+	bool datagramSize; // -d
+	bool payloadSize; // -p
+	bool randSizeMinMax; // -l
+	bool randSizeAvgStd; // -r
+	bool randTimeMinMax; // -s
+	bool randTimeAvgStd; // -t
+	bool increasingSize; // -i
+	bool excludingPing; // -e
+	bool numberOfPings; // -n
+	
+	for(int i = 2; i < argc; i++) {
+	// argv[0] is the ./a which is input
+	// argv[1] is the IPv4 address, MUST be valid
+		
+		if(strcmp(argv[i],"-q") == 0)
+		{
+			if(timeBetweenRepReq || randTimeMinMax || randTimeAvgStd)
+			{
+				printf("-q flag not set, conflicting with previously set flag.\n");
+			}
+			else
+			{
+				timeBetweenReq = true;
+				printf("Flag -q set!\n");
+			}
+		}
+		else if(strcmp(argv[i],"-b") == 0)
+		{
+			if(timeBetweenReq || randTimeMinMax || randTimeAvgStd)
+			{
+				printf("-p flag not set, conflicting with previously set flag.\n");
+			}
+			else
+			{
+				timeBetweenRepReq = true;
+				printf("Flag -q set!\n");
+			}
+		}
+		else if(strcmp(argv[i],"-d") == 0)
+		{
+			if(payloadSize || randSizeMinMax || randSizeAvgStd)
+			{
+				printf("-d flag not set, conflicting with previously set flag.\n");
+			}
+			else
+			{
+				datagramSize = true;
+				printf("Flag -d set!\n");
+			}
+		}
+		else if(strcmp(argv[i],"-p") == 0)
+		{
+			if(datagramSize || randSizeMinMax || randSizeAvgStd)
+			{
+				printf("-p flag not set, conflicting with previously set flag.\n");
+			}
+			else
+			{
+				payloadSize = true;
+				printf("Flag -p set!\n");
+			}
+		}
+		else if(strcmp(argv[i],"-l") == 0)
+		{
+			if(datagramSize || payloadSize || increasingSize || randSizeAvgStd)
+			{
+				printf("-l flag not set, conflicting with previously set flag.\n");
+			}
+			else
+			{
+				randSizeMinMax = true;
+				printf("Flag -l set!\n");
+			}
+		}
+		else if(strcmp(argv[i],"-r") == 0)
+		{
+			if(datagramSize || payloadSize || increasingSize || randSizeMinMax)
+			{
+				printf("-r flag not set, conflicting with previously set flag.\n");
+			}
+			else
+			{
+				randSizeAvgStd = true;
+				printf("Flag -r set!\n");
+			}
+		}
+		else if(strcmp(argv[i],"-s") == 0)
+		{
+			if(timeBetweenReq || timeBetweenRepReq || randTimeAvgStd)
+			{
+				printf("-s flag not set, conflicting with previously set flag.\n");
+			}
+			else
+			{
+				randTimeMinMax = true;
+				printf("Flag -s set!\n");
+			}
+		}
+		else if(strcmp(argv[i],"-t") == 0)
+		{
+			if(timeBetweenReq || timeBetweenRepReq || randTimeMinMax)
+			{
+				printf("-t flag not set, conflicting with previously set flag.\n");
+			}
+			else
+			{
+				randTimeAvgStd = true;
+				printf("Flag -t set!\n");
+			}
+		}
+		else if(strcmp(argv[i],"-i") == 0)
+		{
+			if(datagramSize || payloadSize || randSizeMinMax || randSizeAvgStd)
+			{
+				printf("-i flag not set, conflicting with previously set flag.\n");
+			}
+			else
+			{
+				increasingSize = true;
+				printf("Flag -i set!\n");
+			}
+		}
+		else if(strcmp(argv[i],"-e") == 0)
+		{
+			excludingPing = true;
+			printf("Flag -e set!\n");
+			
+		}
+		else if(strcmp(argv[i],"-n") == 0)
+		{
+			numberOfPings = true;
+			printf("Flag -n set!\n");
+			
+		}
+		else
+		{
+			printf("Flag not recognized, \"%s\"\n",argv[i]);
+		}
+	}
+	printf("Flags are set and heading out to %s\n",argv[1]);
+
 	char hostName[128];
 	printf("main() mark 1\n");
 	gethostname(hostName, 128);
@@ -295,6 +442,11 @@ int main(int argc, const char** argv)
 	printf("main() mark 4\n");
 	IPHeader.sourceIPAddress = srcIP;
 	IPHeader.destinationIPAddress = destIP;
+	/*
+	
+		UNIX block for setting the address
+		
+	*/
 	#if __unix__
 	printf("main() mark 4.5\n");
 	//inet_pton(AF_INET,hostIP->h_name,&srcIP);
@@ -311,6 +463,11 @@ int main(int argc, const char** argv)
 	{
 		printf("inet_pton error for Socket Address\n");
 	}
+	/*
+	
+		APPLE block for setting the address
+		
+	*/
 	#elif __APPLE__
 	printf("main() mark 4.5\n");
 	//inet_pton(AF_INET,hostIP->h_name,&srcIP);
@@ -327,6 +484,11 @@ int main(int argc, const char** argv)
 	{
 		printf("inet_pton error for Socket Address\n");
 	}
+	/*
+	
+		WINDOWS block for setting the address
+		
+	*/
 	#elif __WINDOWS__
 	printf("main() mark 5 (windows)\n");
 	if(InetPton(AF_INET,destination,&IPHeader.destinationIPAddress)!=1)
