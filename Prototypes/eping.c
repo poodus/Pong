@@ -286,17 +286,19 @@ int main(int argc, const char** argv)
 	//const char* flag[2];
 	
 	const char* destination = argv[1];
-	bool timeBetweenReq; // -q
-	bool timeBetweenRepReq; // -b
-	bool datagramSize; // -d
-	bool payloadSize; // -p
-	bool randSizeMinMax; // -l
-	bool randSizeAvgStd; // -r
-	bool randTimeMinMax; // -s
-	bool randTimeAvgStd; // -t
-	bool increasingSize; // -i
-	bool excludingPing; // -e
-	bool numberOfPings; // -n
+	bool timeBetweenReq = 0; // -q
+	bool timeBetweenRepReq = 0; // -b
+	bool datagramSize = 0; // -d
+	bool payloadSize = 0; // -p
+	bool randSizeMinMax = 0; // -l
+	bool randSizeAvgStd = 0; // -r
+	bool randTimeMinMax = 0; // -s
+	bool randTimeAvgStd = 0; // -t
+	bool increasingSize = 0; // -i
+	bool excludingPing = 0; // -e
+		int pingsToExclude = 0;
+	bool multiplePings = 0; // -n
+		int numberOfPings = 0;
 	
 	for(int i = 2; i < argc; i++) {
 	// argv[0] is the ./a which is input
@@ -304,6 +306,9 @@ int main(int argc, const char** argv)
 		
 		if(strcmp(argv[i],"-q") == 0)
 		{
+			printf("timeBetweenRepReq = %d\n", timeBetweenRepReq);
+			printf("randTimeMinMax = %d\n", randTimeMinMax);
+			printf("randTimeAvgStd = %d\n", randTimeAvgStd);
 			if(timeBetweenRepReq || randTimeMinMax || randTimeAvgStd)
 			{
 				printf("-q flag not set, conflicting with previously set flag.\n");
@@ -318,12 +323,12 @@ int main(int argc, const char** argv)
 		{
 			if(timeBetweenReq || randTimeMinMax || randTimeAvgStd)
 			{
-				printf("-p flag not set, conflicting with previously set flag.\n");
+				printf("-b flag not set, conflicting with previously set flag.\n");
 			}
 			else
 			{
 				timeBetweenRepReq = true;
-				printf("Flag -q set!\n");
+				printf("Flag -b set!\n");
 			}
 		}
 		else if(strcmp(argv[i],"-d") == 0)
@@ -413,13 +418,17 @@ int main(int argc, const char** argv)
 		else if(strcmp(argv[i],"-e") == 0)
 		{
 			excludingPing = true;
-			printf("Flag -e set!\n");
+			pingsToExclude = atoi(argv[i + 1]);
+			i++;
+			printf("Flag -e set! %d earliest pings to be excluded.\n", pingsToExclude);
 			
 		}
 		else if(strcmp(argv[i],"-n") == 0)
 		{
-			numberOfPings = true;
-			printf("Flag -n set!\n");
+			multiplePings = true;
+			numberOfPings = atoi(argv[i + 1]);
+			i++;
+			printf("Flag -n set! %d pings to be sent.\n", numberOfPings);
 			
 		}
 		else
