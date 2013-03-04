@@ -253,8 +253,8 @@ void buildPing(int REQ_DATASIZE, int seq)
 	icmpHeader->icmp_type = 8;
 	icmpHeader->icmp_code = 0;
 	icmpHeader->icmp_cksum = 0;
-	icmpHeader->icmp_seq = htons(seq);
-	icmpHeader->icmp_id = htons(ident);
+	icmpHeader->icmp_seq = seq;
+	icmpHeader->icmp_id = ident;
 	// Fill packet
 	#if __unix__
 	//time(&ICMPEchoRequest.time);
