@@ -116,6 +116,7 @@ static int checksum(u_short *ICMPHeader, int len)
         sum = (sum >> 16) + (sum & 0xffff);     /* add hi 16 to low 16 */
         sum += (sum >> 16);                     /* add carry */
         answer = ~sum;                          /* truncate to 16 bits */
+		answer=htons(answer);
         printf("checksum() end\n");
         printf("------------------\n");
         return(answer);
@@ -249,11 +250,11 @@ void buildPing(int REQ_DATASIZE, int seq)
 {
 	printf("buildPing() begin\n");
 	icmpHeader = (struct icmp *)outpack;
-	icmpHeader->icmp_type = 8;
+	icmpHeader->icmp_type = htons(8);
 	icmpHeader->icmp_code = 0;
 	icmpHeader->icmp_cksum = 0;
-	icmpHeader->icmp_seq = seq;
-	icmpHeader->icmp_id = ident;
+	icmpHeader->icmp_seq = htons(seq);
+	icmpHeader->icmp_id = htons(ident);
 	// Fill packet
 	#if __unix__
 	//time(&ICMPEchoRequest.time);
@@ -442,6 +443,7 @@ int main(int argc, const char** argv)
 	printf("main() mark 4\n");
 	IPHeader.sourceIPAddress = srcIP;
 	IPHeader.destinationIPAddress = destIP;
+	whereto.sa_family=AF_INET;
 	/*
 	
 		UNIX block for setting the address
