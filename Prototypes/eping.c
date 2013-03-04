@@ -168,6 +168,7 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 		printf("Ping sent!\n");
 	}
 	else
+//TODO remove this when debugging is done
 	{
 		printf("Ping not sent.\n");
 	}
