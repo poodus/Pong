@@ -61,39 +61,22 @@ struct tagIPHeader
 	struct in_addr destinationIPAddress;
 };
 
-
-/* 
-	ICMP HEADER 
-*/
-struct tagICMPHeader{
-	u_char type;
-	u_char code;
-	u_short checksum;
-	u_short identifier;
-	u_short sequenceNumber;
-};
-
-
-/* Socket Address ipv4 */
-struct sockaddr_in *socketAddress;
-struct sockaddr whereto;
-
-struct in_addr destIP;
-struct in_addr srcIP;
-
-
 /*
 	Initialize Structs
 */
 
+struct sockaddr_in *socketAddress;
+struct sockaddr whereto;
+struct in_addr destIP;
+struct in_addr srcIP;
+struct icmp * icmpHeader;
 tagIPHeader IPHeader;
-tagICMPHeader * icmpHeader;
 u_char outpack[100];
 
 // Variable to see if the packet was sent
 int sent;
 
-static int ident;
+int ident;
 
 /*
 
@@ -119,7 +102,7 @@ static int checksum(u_short *ICMPHeader, int len)
          */
         while (nleft > 1)  {
 
-            sum += *ICMPPointer;
+            sum += *ICMPPointer++;
             nleft -= 2;
         }
 
@@ -136,7 +119,7 @@ static int checksum(u_short *ICMPHeader, int len)
         printf("checksum() end\n");
         printf("------------------\n");
         return(answer);
-	
+
 }
 
 
@@ -148,17 +131,18 @@ static int checksum(u_short *ICMPHeader, int len)
 void ping(int socketDescriptor,int REQ_DATASIZE)
 {
 	printf("ping() begin\n");
+	register int cc = 56;
+
 	// Fill in some data to send
-	//memset(ICMPEchoRequest.charfillData, 'A', REQ_DATASIZE);
-	
+
 	// Save tick count when sent (milliseconds)
 
 	// Compute checksum
-	icmpHeader->icmp_cksum = checksum((u_short *)&icmpHeader, cc);
+	icmpHeader->icmp_cksum = checksum((u_short *)&icmpHeader, 64);
 
 	// Send the packet
-	sent = sendto(socketDescriptor, (char *)outpack, cc, 0, &whereto, sizeof(struct sockaddr));
-	
+	sent = sendto(socketDescriptor, (char *)outpack, 64, 0, &whereto, sizeof(struct sockaddr));
+
 	// Increment packet sequence number
 	icmpHeader->icmp_seq++;
 
@@ -168,14 +152,13 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 		printf("Ping sent!\n");
 	}
 	else
-//TODO remove this when debugging is done
 	{
 		printf("Ping not sent.\n");
 	}
-	
+
 	printf("ping() end\n");
 	printf("------------------\n");
-	
+
 }
 
 
@@ -189,19 +172,19 @@ void listen(int socketDescriptor, sockaddr *fromWhom)
 {
 	printf("listen() begin\n");
 	// Setting some flags needed for select()
-	
+
 	fd_set readfds; //If this line doesn't work, try 'struct fd_set readfds', may additionally need preprocessor stuff
 	//readfds.fd_count = 1; // Set # of sockets (I **think**)
 	//readfds.fd_array[0] = raw; // Should be the sets of socket 
 	struct timeval timeout;
 	timeout.tv_sec = 2; // timeout period, seconds (added second, if that matters)
 	timeout.tv_usec = 0; // timeuot period, microseconds 1,000,000 micro = second
-	
+
 	socklen_t fromWhomLength;
 	fromWhomLength = sizeof fromWhom;
-	
+
 	char buf[512];
-	
+
 	// The following are functions we will probably need to use later
 	// On second thought, we recieve (ping) packets one at a time, not as a set. We may not need these after all.
 	// FD_SET(int fd, fd_set *set);		Add fd to the set
@@ -230,13 +213,13 @@ void listen(int socketDescriptor, sockaddr *fromWhom)
 	}
 	printf("listen() end\n");
 	printf("------------------\n");
-	
+
 	// Get the info out of it
-	
+
 	// Was it an error packet? Uh oh!
-	
+
 	/* Lost packets: was this packet in order with the sequence? */
-	
+
 }
 
 
@@ -250,7 +233,7 @@ void report()
 	// Any missing packets?
 	// Delays for each packet
 	// Print it!
-	
+
 
 }
 
@@ -262,7 +245,6 @@ void report()
 	buildPing()
 
 */
-
 void buildPing(int REQ_DATASIZE, int seq)
 {
 	printf("buildPing() begin\n");
@@ -279,11 +261,10 @@ void buildPing(int REQ_DATASIZE, int seq)
 	//ICMPEchoRequest.time = time(NULL);
 	#endif
 	IPHeader.protocol = 1;
+	IPHeader.timeToLive = 64; //Recommended value, according to the internet.
 	IPHeader.versionHeaderLength = sizeof(struct tagIPHeader) + 64;
-	//sizeof(struct tagIPHeader) >> 2
-	IPHeader.timeToLive = 64;//Recommended value, according to the internet.
-	IPHeader.versionHeaderLength = 0b01000101;
 	printf("buildPing() end\n");
+	printf("------------------\n");
 }
 
 /*
@@ -296,10 +277,10 @@ int main(int argc, const char** argv)
 {
 	printf("------------------\n");
 	// REMOVE THIS LATER
-	int REQ_DATASIZE =  50;
+	const int REQ_DATASIZE = 50;
 	// STOP REMOVING
 	printf("main() begin\n");
-	//const char* destination="127.0.0.1";
+	const char* destination = "8.8.8.8";
 	char hostName[128];
 	printf("main() mark 1\n");
 	gethostname(hostName, 128);
@@ -314,10 +295,9 @@ int main(int argc, const char** argv)
 	printf("main() mark 4\n");
 	IPHeader.sourceIPAddress = srcIP;
 	IPHeader.destinationIPAddress = destIP;
-
 	#if __unix__
 	printf("main() mark 4.5\n");
-	inet_pton(AF_INET,hostIP->h_name,&srcIP);
+	//inet_pton(AF_INET,hostIP->h_name,&srcIP);
 	printf("main() mark 5 (unix)\n");
 	socketAddress = (struct sockaddr_in *)&whereto;
 	if(inet_pton(AF_INET,destination,&IPHeader.destinationIPAddress)!=1)
@@ -331,7 +311,22 @@ int main(int argc, const char** argv)
 	{
 		printf("inet_pton error for Socket Address\n");
 	}
-
+	#elif __APPLE__
+	printf("main() mark 4.5\n");
+	//inet_pton(AF_INET,hostIP->h_name,&srcIP);
+	printf("main() mark 5 (APPLE)\n");
+	socketAddress = (struct sockaddr_in *)&whereto;
+	if(inet_pton(AF_INET,destination,&IPHeader.destinationIPAddress)!=1)
+	{
+		// int error=WSAGetLastError();
+		// printf((char*)error);
+		// Add error message, etc.
+		printf("inet_pton error for IP Header\n");
+	}
+	if(inet_pton(AF_INET,destination,&(socketAddress->sin_addr))!=1)
+	{
+		printf("inet_pton error for Socket Address\n");
+	}
 	#elif __WINDOWS__
 	printf("main() mark 5 (windows)\n");
 	if(InetPton(AF_INET,destination,&IPHeader.destinationIPAddress)!=1)
@@ -347,8 +342,8 @@ int main(int argc, const char** argv)
 	#endif
 
 	printf("main() mark 6\n");
-	int seq = 0;
-	int ident = getpid() & 0xFFFF;
+	int seq = 1;
+	ident = getpid() & 0xFFFF;
 	int inSocketDescriptor;
 	int outSocketDescriptor;
 	printf("main() mark 7\n");
@@ -362,4 +357,3 @@ int main(int argc, const char** argv)
 	printf("main() end\n");
 	printf("------------------\n");
 }
-
