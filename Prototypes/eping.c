@@ -261,7 +261,8 @@ void buildPing(int REQ_DATASIZE, int seq)
 	//ICMPEchoRequest.time = time(NULL);
 	#endif
 	IPHeader.protocol = 1;
-	IPHeader.versionHeaderLength = sizeof(struct tagIPHeader) >> 2;
+	IPHeader.versionHeaderLength = sizeof(struct tagIPHeader) + 64;
+	//sizeof(struct tagIPHeader) >> 2
 	IPHeader.timeToLive = 64;//Recommended value, according to the internet.
 	// IPHeader.versionHeaderLength = 0b01000101;
 	printf("buildPing() end\n");
@@ -358,7 +359,7 @@ int main(int argc, const char* argv[])
 	{
 		printf("inet_pton error for Socket Address\n");
 	}
-	InetPton(AF_INET,hostIP,*IPHeader.sourceIPAddress);
+	InetPton(AF_INET,hostIP,&IPHeader.sourceIPAddress);
 	#endif
 
 	printf("main() mark 6\n");
