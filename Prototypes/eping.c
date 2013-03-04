@@ -118,9 +118,9 @@ static int checksum(u_short *ICMPHeader, int len)
          */
         while (nleft > 1)  {
 
-                sum = sum+ *ICMPPointer;
-		*ICMPPointer++;
-                nleft -= 2;
+            sum = sum+ *ICMPPointer;
+			*ICMPPointer++;
+            nleft -= 2;
         }
 
         /* mop up an odd byte, if necessary */
@@ -203,14 +203,14 @@ void listen(int socketDescriptor, sockaddr *fromWhom)
 	// FD_CLR(int fd, fd_set *set);		Remove fd to the set
 	// FD_ISSET(int fd, fd_set *set);	Returns trye if fd is in the set(probably won't use this one)
 	// FD_ZERO(fd_set *set);			Clears all entries from the set
-	int rv;
+	int selectStatus;
 	printf("Listening...");
-	rv = select(socketDescriptor + 1, &readfds, NULL, NULL, &timeout);
-	if(rv == -1) 
+	selectStatus = select(socketDescriptor + 1, &readfds, NULL, NULL, &timeout);
+	if(selectStatus == -1) 
 	{
 		printf("Something terrible has happened! Error in select()\n");
 	}
-	else if(rv == 0)
+	else if(selectStatus == 0)
 	{
 		printf("I'm tired of waiting. Timeout occurred. Packet took too long to reply.\n");
 	}
