@@ -69,13 +69,14 @@ struct sockaddr_in *socketAddress;
 struct sockaddr whereto;
 struct in_addr destIP;
 struct in_addr srcIP;
-struct icmp * icmpHeader;
+struct icmp *icmpHeader;
 tagIPHeader IPHeader;
 u_char outpack[100];
 
 // Variable to see if the packet was sent
 int sent;
 
+// IP header id
 static int ident;
 
 /*
