@@ -113,7 +113,7 @@ static int checksum(u_short *ICMPHeader, int len)
 
         /*
          * Our algorithm is simple, using a 32 bit accumulator (sum), we add
-         * sequential 16 bit words to it, and at the end, fold back all the
+         * sequential 16 bit words to it, and at the end, fold back all the 
          * carry bits from the top 16 bits into the lower 16 bits.
          */
         while (nleft > 1)  {
@@ -282,14 +282,48 @@ void buildPing(int REQ_DATASIZE, int seq)
 	main()
 
 */
-char *argv[2];
-int main(int argc, const char** argv)
+//char *argv[2];
+int main(int argc, const char* argv[])
 {
+	printf("argc = %d\n", argc);\
+	//const char* flag[2];
+	
+	const char* destination = argv[1];
+	
+	for(int i = 2; i < argc; i++) {
+	// argv[0] is the ./a which is input
+	// argv[1] is the IPv4 address, MUST be valid
+		
+		if(strcmp(argv[i],"-a") == 0)
+		{
+			printf("Flag a set\n");
+		}
+		else if(strcmp(argv[i],"-b") == 0)
+		{
+			printf("Flag b set\n");
+		}
+		else if(strcmp(argv[i],"-c") == 0)
+		{
+			printf("Flag c set\n");
+		}
+		else if(strcmp(argv[i],"-d") == 0)
+		{
+			printf("Flag d set\n");
+		}
+		else
+		{
+			printf("Flag not recognized, \"%s\"\n",argv[i]);
+		}
+	}
+	printf("Flags are set and heading out to %s\n",argv[1]);
+		
+	
+	
 	// REMOVE THIS LATER
 	int REQ_DATASIZE =  50;
 	// STOP REMOVING
 	printf("main() begin\n");
-	const char* destination="127.0.0.1";
+	//const char* destination="127.0.0.1";
 	char hostName[128];
 	printf("main() mark 1\n");
 	gethostname(hostName, 128);
