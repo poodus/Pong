@@ -102,7 +102,7 @@ static int checksum(u_short *ICMPHeader, int len)
          */
         while (nleft > 1)  {
 
-            sum += *ICMPPointer;
+            sum += *ICMPPointer++;
             nleft -= 2;
         }
 
