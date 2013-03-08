@@ -22,6 +22,7 @@
 #include <sys/time.h>
 #include <sys/signal.h>
 #include <sys/unistd.h>
+#include <sys/select.h>
 
 #include <netdb.h>
 #include <netinet/in.h>
@@ -114,15 +115,9 @@ static u_short checksum(u_short *ICMPHeader, int len)
         }
 
         /* add back carry outs from top 16 bits to low 16 bits */
-		std::cout<<(sum>>16)<<std::endl;
         sum = (sum >> 16) + (sum & 0xffff);     /* add hi 16 to low 16 */
-		
-		std::cout<<sum<<std::endl;
         sum += (sum >> 16);                     /* add carry */
-		std::cout<<sum<<std::endl;
         answer = (u_short)~sum;                          /* truncate to 16 bits */
-		std::cout<<sum<<std::endl;
-		std::cout<<sizeof(answer)<<std::endl;
         printf("checksum() end\n");
         printf("------------------\n");
         return(answer);
@@ -179,14 +174,20 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 	listen()
 
 */
-void listen(int socketDescriptor, sockaddr *fromWhom)
+void listen(int socketDescriptor, sockaddr *fromWhom, int port)
 {
 	printf("listen() begin\n");
 	// Setting some flags needed for select()
 
-	fd_set readfds; //If this line doesn't work, try 'struct fd_set readfds', may additionally need preprocessor stuff
-	//readfds.fd_count = 1; // Set # of sockets (I **think**)
-	//readfds.fd_array[0] = raw; // Should be the sets of socket 
+	int fds[1];
+	
+
+	fd_set *readfds;
+	FD_SET(socketDescriptor, readfds);
+	
+	// struct fd_set readfds; //If this line doesn't work, try 'struct fd_set readfds', may additionally need preprocessor stuff
+	// readfds.fd_count = 1; // Set # of sockets (I **think**)
+	// readfds.fd_array[0] = raw; // Should be the sets of socket 
 	struct timeval timeout;
 	timeout.tv_sec = 2; // timeout period, seconds (added second, if that matters)
 	timeout.tv_usec = 0; // timeuot period, microseconds 1,000,000 micro = second
@@ -204,7 +205,7 @@ void listen(int socketDescriptor, sockaddr *fromWhom)
 	// FD_ZERO(fd_set *set);			Clears all entries from the set
 	int selectStatus;
 	printf("Listening...");
-	selectStatus = select(socketDescriptor + 1, &readfds, NULL, NULL, &timeout);
+	selectStatus = select(socketDescriptor, readfds, NULL, NULL, &timeout);
 	if(selectStatus == -1) 
 	{
 		printf("Something terrible has happened! Error in select()\n");
@@ -216,9 +217,9 @@ void listen(int socketDescriptor, sockaddr *fromWhom)
 	else
 	{
 		printf("(I think) this means we have a reply!\n");
-		if(FD_ISSET(socketDescriptor, &readfds))
+		if(FD_ISSET(socketDescriptor, readfds))
 		{
-			recvfrom(socketDescriptor, buf, sizeof buf, 0, fromWhom, &fromWhomLength);
+			recvfrom(socketDescriptor, &buf, sizeof buf, 0, fromWhom, &fromWhomLength);
 			printf("Packet receieved! (probably)\n");
 		}
 	}
@@ -523,7 +524,9 @@ int main(int argc, const char** argv)
 	}
 	InetPton(AF_INET,hostIP,&IPHeader.sourceIPAddress);
 	#endif
-
+	socketAddress->sin_port=htons(3490);
+	std::cout<<socketAddress->sin_port<<std::endl;
+	
 	printf("main() mark 6\n");
 	int seq = 1;
 	ident = getpid() & 0xFFFF;
@@ -535,7 +538,7 @@ int main(int argc, const char** argv)
 	outSocketDescriptor=socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	buildPing(REQ_DATASIZE,seq);
 	ping(outSocketDescriptor,REQ_DATASIZE);
-	listen(inSocketDescriptor, &whereto);
+	listen(inSocketDescriptor, &whereto, socketAddress->sin_port);
 	report();
 	printf("main() end\n");
 	printf("------------------\n");
