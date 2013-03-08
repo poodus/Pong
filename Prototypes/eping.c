@@ -174,12 +174,10 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 	listen()
 
 */
-void listen(int socketDescriptor, sockaddr *fromWhom, int port)
+void listen(int socketDescriptor, sockaddr *fromWhom)
 {
 	printf("listen() begin\n");
 	// Setting some flags needed for select()
-
-	int fds[1];
 	
 
 	fd_set *readfds;
@@ -205,7 +203,7 @@ void listen(int socketDescriptor, sockaddr *fromWhom, int port)
 	// FD_ZERO(fd_set *set);			Clears all entries from the set
 	int selectStatus;
 	printf("Listening...");
-	selectStatus = select(socketDescriptor, readfds, NULL, NULL, &timeout);
+	selectStatus = select(socketDescriptor+1, readfds, NULL, NULL, &timeout);
 	if(selectStatus == -1) 
 	{
 		printf("Something terrible has happened! Error in select()\n");
@@ -219,7 +217,8 @@ void listen(int socketDescriptor, sockaddr *fromWhom, int port)
 		printf("(I think) this means we have a reply!\n");
 		if(FD_ISSET(socketDescriptor, readfds))
 		{
-			recvfrom(socketDescriptor, &buf, sizeof buf, 0, fromWhom, &fromWhomLength);
+			recvfrom(socketDescriptor, &buf, sizeof buf, 0, fromWhom, &fromWhomLength);\
+			report(&buf, sizeof buf);
 			printf("Packet receieved! (probably)\n");
 		}
 	}
@@ -240,7 +239,7 @@ void listen(int socketDescriptor, sockaddr *fromWhom, int port)
 	report()
 
 */
-void report()
+void report((char*) buf, int len)
 {
 	// Any missing packets?
 	// Delays for each packet
@@ -603,7 +602,7 @@ int main(int argc, const char** argv)
 	*/
 	#if __unix__
 	printf("main() mark 4.5\n");
-	//inet_pton(AF_INET,hostIP->h_name,&srcIP);
+	inet_pton(AF_INET,hostIP->h_name,&srcIP);
 	printf("main() mark 5 (unix)\n");
 	socketAddress = (struct sockaddr_in *)&whereto;
 	if(inet_pton(AF_INET,destination,&IPHeader.destinationIPAddress)!=1)
@@ -624,7 +623,7 @@ int main(int argc, const char** argv)
 	*/
 	#elif __APPLE__
 	printf("main() mark 4.5\n");
-	//inet_pton(AF_INET,hostIP->h_name,&srcIP);
+	inet_pton(AF_INET,hostIP->h_name,&srcIP);
 	printf("main() mark 5 (APPLE)\n");
 	socketAddress = (struct sockaddr_in *)&whereto;
 	if(inet_pton(AF_INET,destination,&IPHeader.destinationIPAddress)!=1)
@@ -659,6 +658,11 @@ int main(int argc, const char** argv)
 	socketAddress->sin_port=htons(3490);
 	std::cout<<socketAddress->sin_port<<std::endl;
 	
+	
+	sockaddr_in sourceSocket;//The sockAddr to listen on
+	sourceSocket.sin_port=htons(3490);
+	sourceSocket.sin_addr=srcIP;
+	sourceSocket.sin_family=AF_INET;
 	printf("main() mark 6\n");
 	int seq = 1;
 	ident = getpid() & 0xFFFF;
@@ -668,10 +672,10 @@ int main(int argc, const char** argv)
 	inSocketDescriptor=socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	printf("main() mark 8\n");
 	outSocketDescriptor=socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
+	bind(outSocketDescriptor,&whereto, sizeof(sourceSocket));
 	buildPing(REQ_DATASIZE,seq);
 	ping(outSocketDescriptor,REQ_DATASIZE);
-	listen(inSocketDescriptor, &whereto, socketAddress->sin_port);
-	report();
+	listen(outSocketDescriptor,(sockaddr *) &sourceSocket);
 	printf("main() end\n");
 	printf("------------------\n");
 }
