@@ -298,14 +298,28 @@ int main(int argc, const char** argv)
 	
 	const char* destination = argv[1];
 	bool timeBetweenReq = 0; // -q
+		int msecsBetweenReq = 0;
 	bool timeBetweenRepReq = 0; // -b
+		int msecsBetweenRepReq = 0;
 	bool datagramSize = 0; // -d
+		int bytesDatagram = 0;
 	bool payloadSize = 0; // -p
+		int bytesPayload = 0;
 	bool randSizeMinMax = 0; // -l
+		int bytesSizeMin = 0;
+		int bytesSizeMax = 0;
 	bool randSizeAvgStd = 0; // -r
+		int bytesSizeAvg = 0;
+		int bytesSizeStd = 0;
 	bool randTimeMinMax = 0; // -s
+		int msecsTimeMin = 0;
+		int msecsTimeMax = 0;
 	bool randTimeAvgStd = 0; // -t
+		int msecsTimeAvg = 0;
+		int msecsTimeStd = 0;
 	bool increasingSize = 0; // -i
+		int sizeInitial = 0;
+		int sizeGrowth = 0;
 	bool excludingPing = 0; // -e
 		int pingsToExclude = 0;
 	bool multiplePings = 0; // -n
@@ -317,17 +331,23 @@ int main(int argc, const char** argv)
 		
 		if(strcmp(argv[i],"-q") == 0)
 		{
-			printf("timeBetweenRepReq = %d\n", timeBetweenRepReq);
-			printf("randTimeMinMax = %d\n", randTimeMinMax);
-			printf("randTimeAvgStd = %d\n", randTimeAvgStd);
 			if(timeBetweenRepReq || randTimeMinMax || randTimeAvgStd)
 			{
 				printf("-q flag not set, conflicting with previously set flag.\n");
 			}
 			else
 			{
-				timeBetweenReq = true;
-				printf("Flag -q set!\n");
+				if(i + 1 < argc && atoi(argv[i+1]) > 0)
+				{
+					timeBetweenReq = true;
+					msecsBetweenReq = atoi(argv[i+1]);
+					printf("Flag -q set! Waiting %d milliseconds between ping requests.\n",msecsBetweenReq);
+					i++;
+				}
+				else
+				{
+					printf("-q flag not set, requires parameter.\n");
+				}
 			}
 		}
 		else if(strcmp(argv[i],"-b") == 0)
@@ -338,8 +358,17 @@ int main(int argc, const char** argv)
 			}
 			else
 			{
-				timeBetweenRepReq = true;
-				printf("Flag -b set!\n");
+				if(i + 1 < argc && atoi(argv[i+1]) > 0)
+				{
+					timeBetweenRepReq = true;
+					msecsBetweenRepReq = atoi(argv[i+1]);
+					printf("Flag -b set! Waiting %d milliseconds between receiving a reply and sending a request\n", msecsBetweenRepReq);
+					i++;
+				}
+				else
+				{
+					printf("-b flag not set, requires parameter.\n");
+				}
 			}
 		}
 		else if(strcmp(argv[i],"-d") == 0)
@@ -350,8 +379,17 @@ int main(int argc, const char** argv)
 			}
 			else
 			{
-				datagramSize = true;
-				printf("Flag -d set!\n");
+				if(i + 1 < argc && atoi(argv[i+1]) > 0)
+				{
+					datagramSize = true;
+					bytesDatagram = atoi(argv[i+1]);
+					printf("Flag -d set! Datagram will be %d bytes large.\n", bytesDatagram);
+					i++;
+				}
+				else
+				{
+					printf("-d flag not set, requires parameter.\n");
+				}
 			}
 		}
 		else if(strcmp(argv[i],"-p") == 0)
@@ -362,8 +400,17 @@ int main(int argc, const char** argv)
 			}
 			else
 			{
-				payloadSize = true;
-				printf("Flag -p set!\n");
+				if(i + 1 < argc && atoi(argv[i+1]) > 0)
+				{
+					payloadSize = true;
+					bytesPayload = atoi(argv[i+1]);
+					printf("Flag -p set! Payload size will be %d bytes large.\n", bytesPayload);
+					i++;
+				}
+				else
+				{
+					printf("-p flag not set, requires parameter.\n");
+				}
 			}
 		}
 		else if(strcmp(argv[i],"-l") == 0)
@@ -374,8 +421,27 @@ int main(int argc, const char** argv)
 			}
 			else
 			{
-				randSizeMinMax = true;
-				printf("Flag -l set!\n");
+				if(i + 2 < argc && atoi(argv[i+2]) > 0)
+				{
+					randSizeMinMax = true;
+					if(atoi(argv[i+1]) > atoi(argv[i+2]))
+					{
+						bytesSizeMin = atoi(argv[i+2]);
+						bytesSizeMax = atoi(argv[i+1]);
+					}
+					else
+					{
+						bytesSizeMin = atoi(argv[i+1]);
+						bytesSizeMax = atoi(argv[i+2]);
+					}
+					printf("Flag -l set! Random size will be between %d ", bytesSizeMin);
+					printf("and %d.\n", bytesSizeMax);
+					i += 2;
+				}
+				else
+				{
+					printf("-l flag not set, requires parameters.\n");
+				}
 			}
 		}
 		else if(strcmp(argv[i],"-r") == 0)
@@ -386,8 +452,19 @@ int main(int argc, const char** argv)
 			}
 			else
 			{
-				randSizeAvgStd = true;
-				printf("Flag -r set!\n");
+				if(i + 2 < argc && atoi(argv[i+2]) > 0)
+				{
+					randSizeAvgStd = true;
+					bytesSizeAvg = atoi(argv[i+1]);
+					bytesSizeStd = atoi(argv[i+2]);
+					printf("Flag -r set! Random size will average %d",bytesSizeAvg);
+					printf(" with a std. dev. of %d.\n", bytesSizeStd);
+					i += 2;
+				}
+				else
+				{
+					printf("-r flag not set, requires parameters.\n");
+				}
 			}
 		}
 		else if(strcmp(argv[i],"-s") == 0)
@@ -398,8 +475,27 @@ int main(int argc, const char** argv)
 			}
 			else
 			{
-				randTimeMinMax = true;
-				printf("Flag -s set!\n");
+				if(i + 2 < argc && atoi(argv[i+2]) > 0)
+				{
+					randTimeMinMax = true;
+					if(atoi(argv[i+1]) > atoi(argv[i+2]))
+					{
+						msecsTimeMin = atoi(argv[i+2]);
+						msecsTimeMax = atoi(argv[i+1]);
+					}
+					else
+					{
+						msecsTimeMin = atoi(argv[i+1]);
+						msecsTimeMax = atoi(argv[i+2]);
+					}
+					printf("Flag -s set! Random time between requests will be between %d ", msecsTimeMin);
+					printf("and %d.\n", msecsTimeMax);
+					i += 2;
+				}
+				else
+				{
+					printf("-s flag not set, requires parameters.\n");
+				}
 			}
 		}
 		else if(strcmp(argv[i],"-t") == 0)
@@ -410,8 +506,19 @@ int main(int argc, const char** argv)
 			}
 			else
 			{
-				randTimeAvgStd = true;
-				printf("Flag -t set!\n");
+				if(i + 2 < argc && atoi(argv[i+2]) > 0)
+				{
+					randTimeAvgStd = true;
+					msecsTimeAvg = atoi(argv[i+1]);
+					msecsTimeStd = atoi(argv[i+2]);
+					printf("Flag -t set! Random time between requests will average %d ",msecsTimeAvg);
+					printf("with a std. dev. of %d.\n", msecsTimeStd);
+					i += 2;
+				}
+				else
+				{
+					printf("-t flag not set, requires parameters.\n");
+				}
 			}
 		}
 		else if(strcmp(argv[i],"-i") == 0)
@@ -422,24 +529,49 @@ int main(int argc, const char** argv)
 			}
 			else
 			{
-				increasingSize = true;
-				printf("Flag -i set!\n");
+				if(i + 2 < argc && atoi(argv[i+2]) > 0)
+				{
+					increasingSize = true;
+					sizeInitial = atoi(argv[i+1]);
+					sizeGrowth = atoi(argv[i+2]);
+					printf("Flag -i set! Pings will have an initial size of %d ", sizeInitial);
+					printf("and grow at a rate of %d per request.\n", sizeGrowth);
+					i += 2;
+				}
+				else
+				{
+					printf("-i flag not set, requires parameters.\n");
+				}
 			}
 		}
 		else if(strcmp(argv[i],"-e") == 0)
 		{
-			excludingPing = true;
-			pingsToExclude = atoi(argv[i + 1]);
-			i++;
-			printf("Flag -e set! %d earliest pings to be excluded.\n", pingsToExclude);
+			if(i + 1 < argc && atoi(argv[i+1]) > 0)
+			{
+				excludingPing = true;
+				pingsToExclude = atoi(argv[i+1]);
+				printf("Flag -e set! %d earliest pings to be excluded from final statistics.\n", pingsToExclude);
+				i++;
+			}
+			else
+			{
+				printf("-e flag not set, requires parameter.\n");
+			}
 			
 		}
 		else if(strcmp(argv[i],"-n") == 0)
 		{
-			multiplePings = true;
-			numberOfPings = atoi(argv[i + 1]);
-			i++;
-			printf("Flag -n set! %d pings to be sent.\n", numberOfPings);
+			if(i + 1 < argc && atoi(argv[i+1]) > 0)
+			{
+				multiplePings = true;
+				numberOfPings = atoi(argv[i + 1]);
+				printf("Flag -n set! %d pings to be sent.\n", numberOfPings);
+				i++;
+			}
+			else
+			{
+				printf("-n flag not set, requires parameter.\n");
+			}
 			
 		}
 		else
