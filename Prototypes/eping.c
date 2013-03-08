@@ -139,7 +139,7 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 	// Save tick count when sent (milliseconds)
 
 	// Compute checksum
-	icmpHeader->icmp_cksum = checksum((u_short *)&icmpHeader, 64);
+	icmpHeader->icmp_cksum = checksum((u_short *)&icmpHeader, sizeof(icmp));
 
 	// Send the packet
 	sent = sendto(socketDescriptor, (char *)outpack, 64, 0, &whereto, sizeof(struct sockaddr));
