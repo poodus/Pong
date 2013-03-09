@@ -87,7 +87,7 @@ int ident;
 
 */
 
-static int checksum(u_short *ICMPHeader, int len)
+static u_short checksum(u_short *ICMPHeader, int len)
 {
 	printf("checksum() begin\n");
         register int nleft = len;
@@ -102,7 +102,8 @@ static int checksum(u_short *ICMPHeader, int len)
          */
         while (nleft > 1)  {
 
-            sum += *ICMPPointer++;
+            sum += *ICMPPointer;
+			ICMPPointer++;
             nleft -= 2;
         }
 
@@ -113,10 +114,15 @@ static int checksum(u_short *ICMPHeader, int len)
         }
 
         /* add back carry outs from top 16 bits to low 16 bits */
+		std::cout<<(sum>>16)<<std::endl;
         sum = (sum >> 16) + (sum & 0xffff);     /* add hi 16 to low 16 */
+		
+		std::cout<<sum<<std::endl;
         sum += (sum >> 16);                     /* add carry */
-        answer = ~sum;                          /* truncate to 16 bits */
-		answer=htons(answer);
+		std::cout<<sum<<std::endl;
+        answer = (u_short)~sum;                          /* truncate to 16 bits */
+		std::cout<<sum<<std::endl;
+		std::cout<<sizeof(answer)<<std::endl;
         printf("checksum() end\n");
         printf("------------------\n");
         return(answer);
@@ -139,7 +145,11 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 	// Save tick count when sent (milliseconds)
 
 	// Compute checksum
-	icmpHeader->icmp_cksum = checksum((u_short *)&icmpHeader, 64);
+	
+	icmpHeader->icmp_cksum =0;
+	icmpHeader->icmp_cksum = checksum((u_short *)icmpHeader, sizeof(*icmpHeader));
+	// icmpHeader->icmp_cksum = htons(63231);
+	
 
 	// Send the packet
 	sent = sendto(socketDescriptor, (char *)outpack, 64, 0, &whereto, sizeof(struct sockaddr));
