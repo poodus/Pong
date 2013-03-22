@@ -65,7 +65,9 @@ struct tagIPHeader
 };
 
 /*
+ 
 	Initialize Structs
+ 
 */
 
 struct sockaddr_in *socketAddress;
@@ -658,21 +660,18 @@ int main(int argc, const char** argv)
 	InetPton(AF_INET,hostIP,&IPHeader.sourceIPAddress);
 	#endif
 	socketAddress->sin_port=htons(3490);
-	std::cout<<socketAddress->sin_port<<std::endl;
-	
-	
 	sockaddr_in sourceSocket;//The sockAddr to listen on
-	sourceSocket.sin_port=htons(3490);
-	sourceSocket.sin_addr=srcIP;
-	sourceSocket.sin_family=AF_INET;
+	sourceSocket.sin_port = htons(3490);
+	sourceSocket.sin_addr = srcIP;
+	sourceSocket.sin_family = AF_INET;
 	printf("main() mark 6\n");
 	ident = getpid() & 0xFFFF;
 	int inSocketDescriptor;
 	int outSocketDescriptor;
 	printf("main() mark 7\n");
-	inSocketDescriptor=socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
+	inSocketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	printf("main() mark 8\n");
-	outSocketDescriptor=socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
+	outSocketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	bind(outSocketDescriptor,&whereto, sizeof(sourceSocket));
     buildPing(REQ_DATASIZE, 1);
     for(int i = 0; i < numberOfPings; i++)
