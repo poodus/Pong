@@ -135,8 +135,7 @@ static u_short checksum(u_short *ICMPHeader, int len)
 void ping(int socketDescriptor,int REQ_DATASIZE)
 {
 	printf("ping() begin\n");
-	register int cc = 56;
-
+    
 	// Fill in some data to send
 
 	// Save tick count when sent (milliseconds)
@@ -158,7 +157,7 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 		printf("Ping sent!\n");
         // Increment packet sequence number
         icmpHeader->icmp_seq++;
-        printf("Seq incremented to:%d", icmpHeader->icmp_seq);
+        printf("Seq incremented to: %d\n", icmpHeader->icmp_seq);
 	}
 	else
 	{
@@ -225,7 +224,7 @@ void listen(int socketDescriptor, sockaddr *fromWhom)
 	int selectStatus;
 	printf("Listening...");
 	selectStatus = select(socketDescriptor+1, readfds, NULL, NULL, &timeout);
-	if(selectStatus == -1) 
+	if(selectStatus == -1)
 	{
 		printf("Something terrible has happened! Error in select()\n");
 	}
@@ -614,8 +613,6 @@ int main(int argc, const char** argv)
 	socketAddress = (struct sockaddr_in *)&whereto;
 	if(inet_pton(AF_INET,destination,&IPHeader.destinationIPAddress)!=1)
 	{
-		// int error=WSAGetLastError();
-		// printf((char*)error);
 		// Add error message, etc.
 		printf("inet_pton error for IP Header\n");
 	}
@@ -635,8 +632,6 @@ int main(int argc, const char** argv)
 	socketAddress = (struct sockaddr_in *)&whereto;
 	if(inet_pton(AF_INET,destination,&IPHeader.destinationIPAddress)!=1)
 	{
-		// int error=WSAGetLastError();
-		// printf((char*)error);
 		// Add error message, etc.
 		printf("inet_pton error for IP Header\n");
 	}
@@ -680,7 +675,6 @@ int main(int argc, const char** argv)
 	outSocketDescriptor=socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	bind(outSocketDescriptor,&whereto, sizeof(sourceSocket));
     buildPing(REQ_DATASIZE, 1);
-    
     for(int i = 0; i < numberOfPings; i++)
     {
         ping(outSocketDescriptor,REQ_DATASIZE);
