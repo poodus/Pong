@@ -92,7 +92,6 @@ int ident;
 */
 static u_short checksum(u_short *ICMPHeader, int len)
 {
-	printf("checksum() begin\n");
         register int nleft = len;
         register u_short *ICMPPointer = ICMPHeader;
         register int sum = 0;
@@ -120,23 +119,21 @@ static u_short checksum(u_short *ICMPHeader, int len)
         sum = (sum >> 16) + (sum & 0xffff);     /* add hi 16 to low 16 */
         sum += (sum >> 16);                     /* add carry */
         answer = (u_short)~sum;                          /* truncate to 16 bits */
-        printf("checksum() end\n");
-        printf("------------------\n");
         return(answer);
-
 }
 
 
 /*
-
-	ping()
-    
-    Calls checksum and sends the packet.
-
-*/
+ 
+    ping()
+ 
+    This method actually sends our ECHO_REQUEST across the internet.
+    It computes the ICMP checksum and sends the packet to the address
+    specified in main().
+ 
+ */
 void ping(int socketDescriptor,int REQ_DATASIZE)
 {
-	printf("ping() begin\n");
     
 	// Fill in some data to send
 
@@ -156,29 +153,25 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 	// Print out if the packet sent or not
 	if(sent > 0)
 	{
-		printf("Ping sent!\n");
+		printf("SENT ");
         // Increment packet sequence number
         icmpHeader->icmp_seq++;
-        printf("Seq incremented to: %d\n", icmpHeader->icmp_seq);
+        printf("Seq : %d\t", icmpHeader->icmp_seq);
 	}
 	else
 	{
 		printf("Ping not sent.\n");
 	}
-
-	printf("ping() end\n");
-	printf("------------------\n");
-
 }
 
 
 /*
  
- report()
+    report()
  
- This function grabs relevent data from the ICMP ECHO_REPLY and
- prints out the statistics of the pings ran with the program.
- It is called by listen().
+    This function grabs relevent data from the ICMP ECHO_REPLY and
+    prints out the statistics of the pings ran with the program.
+    It is called by listen().
  
  */
 void report(char* buf, int length)
@@ -202,39 +195,25 @@ void report(char* buf, int length)
 }
 
 /*
-
-	listen()
  
-    This function is ready to receive ECHO_REPLY's, which are destined for our computer
-
-*/
+    listen()
+ 
+    This function receives ECHO_REPLY packets sent to the host computer,
+    and determines if they are destined for our host computer.
+ 
+ */
 void listen(int socketDescriptor, sockaddr *fromWhom)
 {
-	printf("listen() begin\n");
 	// Setting some flags needed for select()
 	char buf[512];
-
 	fd_set *readfds;
 	FD_SET(socketDescriptor, readfds);
-	
-	// struct fd_set readfds; //If this line doesn't work, try 'struct fd_set readfds', may additionally need preprocessor stuff
-	// readfds.fd_count = 1; // Set # of sockets (I **think**)
-	// readfds.fd_array[0] = raw; // Should be the sets of socket 
 	struct timeval timeout;
 	timeout.tv_sec = 2; // timeout period, seconds (added second, if that matters)
 	timeout.tv_usec = 0; // timeuot period, microseconds 1,000,000 micro = second
-
 	socklen_t fromWhomLength;
 	fromWhomLength = sizeof fromWhom;
-
-	// The following are functions we will probably need to use later
-	// On second thought, we recieve (ping) packets one at a time, not as a set. We may not need these after all.
-	// FD_SET(int fd, fd_set *set);		Add fd to the set
-	// FD_CLR(int fd, fd_set *set);		Remove fd to the set
-	// FD_ISSET(int fd, fd_set *set);	Returns trye if fd is in the set(probably won't use this one)
-	// FD_ZERO(fd_set *set);			Clears all entries from the set
 	int selectStatus;
-	printf("Listening...");
 	selectStatus = select(socketDescriptor+1, readfds, NULL, NULL, &timeout);
 	if(selectStatus == -1)
 	{
@@ -246,60 +225,46 @@ void listen(int socketDescriptor, sockaddr *fromWhom)
 	}
 	else
 	{
-		printf("(I think) this means we have a reply!\n");
 		if(FD_ISSET(socketDescriptor, readfds))
 		{
 			recvfrom(socketDescriptor, &buf, sizeof buf, 0, fromWhom, &fromWhomLength);
-			printf("Packet receieved! (probably)\n");
+			printf("RECEIVED\t");
             report(buf, sizeof buf);
 		}
 	}
-	printf("listen() end\n");
-	printf("------------------\n");
-
-	// Get the info out of it
-
-	// Was it an error packet? Uh oh!
-
-	/* Lost packets: was this packet in order with the sequence? */
-
 }
 
 
 /*
-
-	buildPing()
  
-    BuildPing initializes the ICMP Header and IP Header structs
-
-*/
+    buildPing()
+ 
+    buildPing() initializes the ICMP Header and IP Header structs, which
+    contain essential packet information. The IP address information is
+    set in main().
+ 
+ */
 void buildPing(int REQ_DATASIZE, int seq)
 {
-	printf("buildPing() begin\n");
 	icmpHeader = (struct icmp *)outpack;
 	icmpHeader->icmp_type = 8;
 	icmpHeader->icmp_code = 0;
 	icmpHeader->icmp_cksum = 0;
 	icmpHeader->icmp_seq = seq;
 	icmpHeader->icmp_id = ident;
-	// Fill packet
-	#if __unix__
-	//time(&ICMPEchoRequest.time);
-	#elif __WINDOWS__
-	//ICMPEchoRequest.time = time(NULL);
-	#endif
 	IPHeader.protocol = 1;
 	IPHeader.timeToLive = 64; //Recommended value, according to the internet.
 	IPHeader.versionHeaderLength = sizeof(struct tagIPHeader) + 64;
-	printf("buildPing() end\n");
-	printf("------------------\n");
 }
 
 /*
-
-	main()
-
-*/
+ 
+    main()
+ 
+    Where the magic happens. Command line flags are set, program
+    control is set.
+ 
+ */
 char *argv[2];
 int main(int argc, const char** argv)
 {
@@ -307,7 +272,6 @@ int main(int argc, const char** argv)
 	// REMOVE THIS LATER
 	const int REQ_DATASIZE = 50;
 	// STOP REMOVING
-	printf("main() begin\n");
 	
 	printf("argc = %d\n", argc);\
 	//const char* flag[2];
@@ -597,19 +561,14 @@ int main(int argc, const char** argv)
 		}
 	}
 	printf("Flags are set and heading out to %s\n",argv[1]);
-
 	char hostName[128];
-	printf("main() mark 1\n");
 	gethostname(hostName, 128);
 	if((hostName) == NULL)
 	{
 		printf("gethostname error: returned null\n");
 	}
-	printf("main() mark 2\n");
 	hostent *hostIP;
-	printf("main() mark 3\n");
 	hostIP=gethostbyname(hostName);
-	printf("main() mark 4\n");
 	IPHeader.sourceIPAddress = srcIP;
 	IPHeader.destinationIPAddress = destIP;
 	whereto.sa_family=AF_INET;
@@ -638,9 +597,7 @@ int main(int argc, const char** argv)
 		
 	*/
 	#elif __APPLE__
-	printf("main() mark 4.5\n");
 	inet_pton(AF_INET,hostIP->h_name,&srcIP);
-	printf("main() mark 5 (APPLE)\n");
 	socketAddress = (struct sockaddr_in *)&whereto;
 	if(inet_pton(AF_INET,destination,&IPHeader.destinationIPAddress)!=1)
 	{
@@ -657,7 +614,6 @@ int main(int argc, const char** argv)
 		
 	*/
 	#elif __WINDOWS__
-	printf("main() mark 5 (windows)\n");
 	if(InetPton(AF_INET,destination,&IPHeader.destinationIPAddress)!=1)
 	{
 		int error=WSAGetLastError();
@@ -674,21 +630,17 @@ int main(int argc, const char** argv)
 	sourceSocket.sin_port = htons(3490);
 	sourceSocket.sin_addr = srcIP;
 	sourceSocket.sin_family = AF_INET;
-	printf("main() mark 6\n");
 	ident = getpid() & 0xFFFF;
 	int inSocketDescriptor;
 	int outSocketDescriptor;
-	printf("main() mark 7\n");
 	inSocketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
-	printf("main() mark 8\n");
 	outSocketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	bind(outSocketDescriptor,&whereto, sizeof(sourceSocket));
-    buildPing(REQ_DATASIZE, 1);
+    buildPing(REQ_DATASIZE, 0);
     for(int i = 0; i < numberOfPings; i++)
     {
         ping(outSocketDescriptor,REQ_DATASIZE);
         listen(inSocketDescriptor,(sockaddr *) &sourceSocket);
     }
-	printf("main() end\n");
 	printf("------------------\n");
 }
