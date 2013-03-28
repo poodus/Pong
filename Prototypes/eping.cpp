@@ -477,7 +477,7 @@ if(result != 0) {
 
 	char hostName[128];
 	printf("main() mark 1\n");
-	gethostname(hostName, 128);
+	gethostname((char *)hostName, 128);
 	if((hostName) == NULL)
 	{
 		printf("gethostname error: returned null\n");
@@ -539,11 +539,12 @@ if(result != 0) {
 	*/
 	#elif WIN32
 	printf("main() mark 5 (windows)\n");
-	if(WSAStringToAddress((char*)destination,AF_INET,NULL,(LPSOCKADDR)&IPHeader.destinationIPAddress,(int*)sizeof(IPHeader.destinationIPAddress))!=1)
+	if(WSAStringToAddress((char *)destination,AF_INET,NULL,(LPSOCKADDR)&IPHeader.destinationIPAddress,(int*)sizeof(IPHeader.destinationIPAddress))!=1)
 	{
 		int error=WSAGetLastError();
 		printf((char*)error);
 	}
+	printf("main() mark 5.1(windows)\n");
 	if(WSAStringToAddress((char*)destination,AF_INET,NULL,(LPSOCKADDR)&(socketAddress->sin_addr),(int*)sizeof(socketAddress->sin_addr))!=1)
 	{
 		printf("inet_pton error for Socket Address\n");
