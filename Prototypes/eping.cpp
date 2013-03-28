@@ -11,25 +11,14 @@
 #include <iostream>
 
 
+
 /*
 
     Imports
 
 */
-#include <sys/param.h>
-#include <sys/socket.h>
-#include <sys/file.h>
-#include <sys/time.h>
-#include <sys/signal.h>
-#include <sys/unistd.h>
-#include <sys/select.h>
 
-#include <netdb.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <netinet/ip_icmp.h>
-#include <arpa/inet.h>
-#include <netdb.h>
+
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,12 +27,105 @@
 #include <errno.h>
 #if __unix__
 #include <arpa/inet.h>
+#include <netinet/ip_icmp.h>
+#include <netinet/ip.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include <time.h>
-
-#elif __WINDOWS__
-#include <windows.h>
-#include <winsock2.h>
+#include <sys/socket.h>
+#include <sys/param.h>
+#include <sys/file.h>
+#include <sys/time.h>
+#include <sys/signal.h>
+#include <sys/unistd.h>
+#include <sys/select.h>
+#include <netdb.h>
 #endif
+
+#if WIN32
+// #include <inaddr.h>
+#include <windows.h>
+#include <stdint.h>
+#include <Ws2tcpip.h>
+#include <winsock2.h>
+//Defines
+// #pragma comment(lib,"ws2_32.lib")
+#define n_short unsigned short
+#define u_char uint8_t
+#define u_short unsigned short
+#endif
+
+
+
+
+#ifdef WIN32
+struct icmp {
+	u_char	icmp_type;		/* type of message, see below */
+	u_char	icmp_code;		/* type sub code */
+	u_short	icmp_cksum;		/* ones complement cksum of struct */
+	union {
+		u_char ih_pptr;			/* ICMP_PARAMPROB */
+		struct in_addr ih_gwaddr;	/* ICMP_REDIRECT */
+		struct ih_idseq {
+			n_short	icd_id;
+			n_short	icd_seq;
+		} ih_idseq;
+		int ih_void;
+
+		/* ICMP_UNREACH_NEEDFRAG -- Path MTU Discovery (RFC1191) */
+		struct ih_pmtu {
+			n_short ipm_void;
+			n_short ipm_nextmtu;
+		} ih_pmtu;
+
+		struct ih_rtradv {
+			u_char irt_num_addrs;
+			u_char irt_wpa;
+			uint16_t irt_lifetime;
+		} ih_rtradv;
+	} icmp_hun;
+#define	icmp_pptr	icmp_hun.ih_pptr
+#define	icmp_gwaddr	icmp_hun.ih_gwaddr
+#define	icmp_id		icmp_hun.ih_idseq.icd_id
+#define	icmp_seq	icmp_hun.ih_idseq.icd_seq
+#define	icmp_void	icmp_hun.ih_void
+#define	icmp_pmvoid	icmp_hun.ih_pmtu.ipm_void
+#define	icmp_nextmtu	icmp_hun.ih_pmtu.ipm_nextmtu
+#define	icmp_num_addrs	icmp_hun.ih_rtradv.irt_num_addrs
+#define	icmp_wpa	icmp_hun.ih_rtradv.irt_wpa
+#define	icmp_lifetime	icmp_hun.ih_rtradv.irt_lifetime
+	union {
+		struct id_ts {
+			time_t its_otime;
+			time_t its_rtime;
+			time_t its_ttime;
+		} id_ts;
+		struct id_ip  {
+			struct in_addr idi_ip;
+			/* options and then 64 bits of data */
+		} id_ip;
+		struct in_addr id_radv;
+		uint32_t id_mask;
+		char	id_data[1];
+	} icmp_dun;
+#define	icmp_otime	icmp_dun.id_ts.its_otime
+#define	icmp_rtime	icmp_dun.id_ts.its_rtime
+#define	icmp_ttime	icmp_dun.id_ts.its_ttime
+#define	icmp_ip		icmp_dun.id_ip.idi_ip
+#define	icmp_radv	icmp_dun.id_radv
+#define	icmp_mask	icmp_dun.id_mask
+#define	icmp_data	icmp_dun.id_data
+};
+
+#endif
+
+
+void buildPing(int REQ_DATASIZE, int seq);
+void listen(int socketDescriptor, sockaddr *fromWhom);
+void report(char* buf, int len);
+void ping(int socketDescriptor,int REQ_DATASIZE);
+static u_short checksum(u_short *ICMPHeader, int len);
+
 
 /*
  
@@ -81,208 +163,6 @@ u_char outpack[100];
 int sent;
 int ident;
 
-/*
-
-	Checksum()
-
-	Simple checksum function for ICMP Header. This implentation was taken from Mike Musss' version of ping.c
-
-*/
-static u_short checksum(u_short *ICMPHeader, int len)
-{
-	printf("checksum() begin\n");
-        register int nleft = len;
-        register u_short *ICMPPointer = ICMPHeader;
-        register int sum = 0;
-        u_short answer = 0;
-
-        /*
-         * Our algorithm is simple, using a 32 bit accumulator (sum), we add
-         * sequential 16 bit words to it, and at the end, fold back all the
-         * carry bits from the top 16 bits into the lower 16 bits.
-         */
-        while (nleft > 1)  {
-
-            sum += *ICMPPointer;
-			ICMPPointer++;
-            nleft -= 2;
-        }
-
-        /* mop up an odd byte, if necessary */
-        if (nleft == 1) {
-                *(u_char *)(&answer) = *(u_char *)ICMPPointer;
-                sum += answer;
-        }
-
-        /* add back carry outs from top 16 bits to low 16 bits */
-        sum = (sum >> 16) + (sum & 0xffff);     /* add hi 16 to low 16 */
-        sum += (sum >> 16);                     /* add carry */
-        answer = (u_short)~sum;                          /* truncate to 16 bits */
-        printf("checksum() end\n");
-        printf("------------------\n");
-        return(answer);
-
-}
-
-
-/*
-
-	ping()
-    
-    Calls checksum and sends the packet.
-
-*/
-void ping(int socketDescriptor,int REQ_DATASIZE)
-{
-	printf("ping() begin\n");
-	register int cc = 56;
-
-	// Fill in some data to send
-
-	// Save tick count when sent (milliseconds)
-
-	// Compute checksum
-	
-	icmpHeader->icmp_cksum =0;
-	icmpHeader->icmp_cksum = checksum((u_short *)icmpHeader, sizeof(*icmpHeader));
-	// icmpHeader->icmp_cksum = htons(63231);
-	
-
-	// Send the packet
-	sent = sendto(socketDescriptor, (char *)outpack, 64, 0, &whereto, sizeof(struct sockaddr));
-
-
-	// Print out if the packet sent or not
-	if(sent > 0)
-	{
-		printf("Ping sent!\n");
-        // Increment packet sequence number
-        icmpHeader->icmp_seq++;
-        printf("Seq incremented to:%d", icmpHeader->icmp_seq);
-	}
-	else
-	{
-		printf("Ping not sent.\n");
-	}
-
-	printf("ping() end\n");
-	printf("------------------\n");
-
-}
-
-
-/*
- 
-    report()
- 
-    This function prints out the final statistics of the pings ran with the program
- 
-*/
-void report(char* buf, int len)
-{
-    printf("report() begin\n");
-	// Any missing packets?
-	// Delays for each packet
-	// Print it!
-    printf("report() end\n");
-    
-    
-}
-
-
-/*
-
-	listen()
- 
-    This function is ready to receive ECHO_REPLY's, which are destined for our computer
-
-*/
-void listen(int socketDescriptor, sockaddr *fromWhom)
-{
-	printf("listen() begin\n");
-	// Setting some flags needed for select()
-	char buf[512];
-
-	fd_set *readfds;
-	FD_SET(socketDescriptor, readfds);
-	
-	// struct fd_set readfds; //If this line doesn't work, try 'struct fd_set readfds', may additionally need preprocessor stuff
-	// readfds.fd_count = 1; // Set # of sockets (I **think**)
-	// readfds.fd_array[0] = raw; // Should be the sets of socket 
-	struct timeval timeout;
-	timeout.tv_sec = 2; // timeout period, seconds (added second, if that matters)
-	timeout.tv_usec = 0; // timeuot period, microseconds 1,000,000 micro = second
-
-	socklen_t fromWhomLength;
-	fromWhomLength = sizeof fromWhom;
-
-	// The following are functions we will probably need to use later
-	// On second thought, we recieve (ping) packets one at a time, not as a set. We may not need these after all.
-	// FD_SET(int fd, fd_set *set);		Add fd to the set
-	// FD_CLR(int fd, fd_set *set);		Remove fd to the set
-	// FD_ISSET(int fd, fd_set *set);	Returns trye if fd is in the set(probably won't use this one)
-	// FD_ZERO(fd_set *set);			Clears all entries from the set
-	int selectStatus;
-	printf("Listening...");
-	selectStatus = select(socketDescriptor+1, readfds, NULL, NULL, &timeout);
-	if(selectStatus == -1) 
-	{
-		printf("Something terrible has happened! Error in select()\n");
-	}
-	else if(selectStatus == 0)
-	{
-		printf("I'm tired of waiting. Timeout occurred. Packet took too long to reply.\n");
-	}
-	else
-	{
-		printf("(I think) this means we have a reply!\n");
-		if(FD_ISSET(socketDescriptor, readfds))
-		{
-			recvfrom(socketDescriptor, &buf, sizeof buf, 0, fromWhom, &fromWhomLength);
-			//report(&buf, sizeof buf);
-			printf("Packet receieved! (probably)\n");
-		}
-	}
-	printf("listen() end\n");
-	printf("------------------\n");
-
-	// Get the info out of it
-
-	// Was it an error packet? Uh oh!
-
-	/* Lost packets: was this packet in order with the sequence? */
-
-}
-
-
-/*
-
-	buildPing()
- 
-    BuildPing initializes the ICMP Header and IP Header structs
-
-*/
-void buildPing(int REQ_DATASIZE, int seq)
-{
-	printf("buildPing() begin\n");
-	icmpHeader = (struct icmp *)outpack;
-	icmpHeader->icmp_type = 8;
-	icmpHeader->icmp_code = 0;
-	icmpHeader->icmp_cksum = 0;
-	icmpHeader->icmp_seq = seq;
-	icmpHeader->icmp_id = ident;
-	// Fill packet
-	#if __unix__
-	//time(&ICMPEchoRequest.time);
-	#elif __WINDOWS__
-	//ICMPEchoRequest.time = time(NULL);
-	#endif
-	IPHeader.protocol = 1;
-	IPHeader.timeToLive = 64; //Recommended value, according to the internet.
-	IPHeader.versionHeaderLength = sizeof(struct tagIPHeader) + 64;
-	printf("buildPing() end\n");
-	printf("------------------\n");
-}
 
 /*
 
@@ -292,6 +172,14 @@ void buildPing(int REQ_DATASIZE, int seq)
 char *argv[2];
 int main(int argc, const char** argv)
 {
+#ifdef WIN32
+WSADATA wsaData;
+int result=WSAStartup(MAKEWORD(2,0), &wsaData);
+if(result != 0) {
+        printf("WSAStartup failed with error: %d\n", wsaData);
+        return 1;
+    }
+#endif
 	printf("------------------\n");
 	// REMOVE THIS LATER
 	const int REQ_DATASIZE = 50;
@@ -649,18 +537,18 @@ int main(int argc, const char** argv)
 		WINDOWS block for setting the address
 		
 	*/
-	#elif __WINDOWS__
+	#elif WIN32
 	printf("main() mark 5 (windows)\n");
-	if(InetPton(AF_INET,destination,&IPHeader.destinationIPAddress)!=1)
+	if(WSAStringToAddress((char*)destination,AF_INET,NULL,(LPSOCKADDR)&IPHeader.destinationIPAddress,(int*)sizeof(IPHeader.destinationIPAddress))!=1)
 	{
 		int error=WSAGetLastError();
 		printf((char*)error);
 	}
-	if(InetPton(AF_INET,destination,&(socketAddress->sin_addr))!=1)
+	if(WSAStringToAddress((char*)destination,AF_INET,NULL,(LPSOCKADDR)&(socketAddress->sin_addr),(int*)sizeof(socketAddress->sin_addr))!=1)
 	{
 		printf("inet_pton error for Socket Address\n");
 	}
-	InetPton(AF_INET,hostIP,&IPHeader.sourceIPAddress);
+	WSAStringToAddress((char*)hostIP,AF_INET,NULL,(LPSOCKADDR)&(IPHeader.sourceIPAddress),(int*)sizeof(IPHeader.sourceIPAddress));
 	#endif
 	socketAddress->sin_port=htons(3490);
 	std::cout<<socketAddress->sin_port<<std::endl;
@@ -688,4 +576,213 @@ int main(int argc, const char** argv)
     }
 	printf("main() end\n");
 	printf("------------------\n");
+	#ifdef WIN32
+int esult = WSACleanup();
+#endif
 }
+/*
+
+	Checksum()
+
+	Simple checksum function for ICMP Header. This implentation was taken from Mike Musss' version of ping.c
+
+*/
+static u_short checksum(u_short *ICMPHeader, int len)
+{
+	printf("checksum() begin\n");
+        register int nleft = len;
+        register u_short *ICMPPointer = ICMPHeader;
+        register int sum = 0;
+        u_short answer = 0;
+
+        /*
+         * Our algorithm is simple, using a 32 bit accumulator (sum), we add
+         * sequential 16 bit words to it, and at the end, fold back all the
+         * carry bits from the top 16 bits into the lower 16 bits.
+         */
+        while (nleft > 1)  {
+
+            sum += *ICMPPointer;
+			ICMPPointer++;
+            nleft -= 2;
+        }
+
+        /* mop up an odd byte, if necessary */
+        if (nleft == 1) {
+                *(u_char *)(&answer) = *(u_char *)ICMPPointer;
+                sum += answer;
+        }
+
+        /* add back carry outs from top 16 bits to low 16 bits */
+        sum = (sum >> 16) + (sum & 0xffff);     /* add hi 16 to low 16 */
+        sum += (sum >> 16);                     /* add carry */
+        answer = (u_short)~sum;                          /* truncate to 16 bits */
+        printf("checksum() end\n");
+        printf("------------------\n");
+        return(answer);
+
+}
+
+
+/*
+
+	ping()
+    
+    Calls checksum and sends the packet.
+
+*/
+void ping(int socketDescriptor,int REQ_DATASIZE)
+{
+	printf("ping() begin\n");
+	register int cc = 56;
+
+	// Fill in some data to send
+
+	// Save tick count when sent (milliseconds)
+
+	// Compute checksum
+	
+	icmpHeader->icmp_cksum =0;
+	icmpHeader->icmp_cksum = checksum((u_short *)icmpHeader, sizeof(*icmpHeader));
+	// icmpHeader->icmp_cksum = htons(63231);
+	
+
+	// Send the packet
+	sent = sendto(socketDescriptor, (char *)outpack, 64, 0, &whereto, sizeof(struct sockaddr));
+
+
+	// Print out if the packet sent or not
+	if(sent > 0)
+	{
+		printf("Ping sent!\n");
+        // Increment packet sequence number
+        icmpHeader->icmp_seq++;
+        printf("Seq incremented to:%d", icmpHeader->icmp_seq);
+	}
+	else
+	{
+		printf("Ping not sent.\n");
+	}
+
+	printf("ping() end\n");
+	printf("------------------\n");
+
+}
+
+
+/*
+ 
+    report()
+ 
+    This function prints out the final statistics of the pings ran with the program
+ 
+*/
+void report(char* buf, int len)
+{
+    printf("report() begin\n");
+	std::cout<<len<<std::endl;
+	// Any missing packets?
+	// Delays for each packet
+	// Print it!
+    printf("report() end\n");
+    
+    
+}
+
+
+/*
+
+	listen()
+ 
+    This function is ready to receive ECHO_REPLY's, which are destined for our computer
+
+*/
+void listen(int socketDescriptor, sockaddr *fromWhom)
+{
+	printf("listen() begin\n");
+	// Setting some flags needed for select()
+	char buf[512];
+	char *buffer=&buf[0];
+
+	fd_set *readfds;
+	FD_SET(socketDescriptor, readfds);
+	
+	// struct fd_set readfds; //If this line doesn't work, try 'struct fd_set readfds', may additionally need preprocessor stuff
+	// readfds.fd_count = 1; // Set # of sockets (I **think**)
+	// readfds.fd_array[0] = raw; // Should be the sets of socket 
+	struct timeval timeout;
+	timeout.tv_sec = 2; // timeout period, seconds (added second, if that matters)
+	timeout.tv_usec = 0; // timeuot period, microseconds 1,000,000 micro = second
+
+	socklen_t fromWhomLength;
+	fromWhomLength = sizeof fromWhom;
+
+	// The following are functions we will probably need to use later
+	// On second thought, we recieve (ping) packets one at a time, not as a set. We may not need these after all.
+	// FD_SET(int fd, fd_set *set);		Add fd to the set
+	// FD_CLR(int fd, fd_set *set);		Remove fd to the set
+	// FD_ISSET(int fd, fd_set *set);	Returns trye if fd is in the set(probably won't use this one)
+	// FD_ZERO(fd_set *set);			Clears all entries from the set
+	int selectStatus;
+	printf("Listening...");
+	selectStatus = select(socketDescriptor+1, readfds, NULL, NULL, &timeout);
+	if(selectStatus == -1) 
+	{
+		printf("Something terrible has happened! Error in select()\n");
+	}
+	else if(selectStatus == 0)
+	{
+		printf("I'm tired of waiting. Timeout occurred. Packet took too long to reply.\n");
+	}
+	else
+	{
+		printf("(I think) this means we have a reply!\n");
+		if(FD_ISSET(socketDescriptor, readfds))
+		{
+			recvfrom(socketDescriptor, &buf[0], sizeof buf, 0, fromWhom, &fromWhomLength);
+			//report(&buf, sizeof buf);
+			printf("Packet receieved! (probably)\n");
+		}
+	}
+	printf("listen() end\n");
+	printf("------------------\n");
+
+	// Get the info out of it
+
+	// Was it an error packet? Uh oh!
+
+	/* Lost packets: was this packet in order with the sequence? */
+
+}
+
+
+/*
+
+	buildPing()
+ 
+    BuildPing initializes the ICMP Header and IP Header structs
+
+*/
+void buildPing(int REQ_DATASIZE, int seq)
+{
+	printf("buildPing() begin\n");
+	icmpHeader = (struct icmp *)outpack;
+	icmpHeader->icmp_type = 8;
+	icmpHeader->icmp_code = 0;
+	icmpHeader->icmp_cksum = 0;
+	icmpHeader->icmp_seq = seq;
+	icmpHeader->icmp_id = ident;
+	// Fill packet
+	#if __unix__
+	//time(&ICMPEchoRequest.time);
+	#elif __WINDOWS__
+	//ICMPEchoRequest.time = time(NULL);
+	#endif
+	IPHeader.protocol = 1;
+	IPHeader.timeToLive = 64; //Recommended value, according to the internet.
+	IPHeader.versionHeaderLength = sizeof(struct tagIPHeader) + 64;
+	printf("buildPing() end\n");
+	printf("------------------\n");
+}
+
+
