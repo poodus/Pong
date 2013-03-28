@@ -174,22 +174,32 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
 
 /*
  
-    report()
+ report()
  
-    This function prints out the final statistics of the pings ran with the program
+ This function grabs relevent data from the ICMP ECHO_REPLY and
+ prints out the statistics of the pings ran with the program.
+ It is called by listen().
  
-*/
-void report(char* buf, int len)
+ */
+void report(char* buf, int length)
 {
-    printf("report() begin\n");
-	// Any missing packets?
-	// Delays for each packet
-	// Print it!
-    printf("report() end\n");
-    
-    
+    /* Create ICMP struct to hold the received data */
+    struct icmp *icmp;
+    /* Format the received data into the ICMP struct */
+    icmp = (struct icmp *) (buf + length);
+    /* Check if the packet was meant for our computer using the ICMP id,
+     which we set to the process ID */
+    if(icmpHeader->icmp_id != ident)
+    {
+        printf("Not our packet\n");
+        printf("Ident = %d \t ID = %d\n", ident, icmpHeader->icmp_id);
+    }
+    printf("Seq: %d \n", icmpHeader->icmp_seq);
+    /* Packet meant for our computer? (icmpHeader->icmp_id == pid) */
+	/* Any missing packets? icmp_seq */
+	/* Delays for each packet */
+	/* Print it! */
 }
-
 
 /*
 
@@ -240,8 +250,8 @@ void listen(int socketDescriptor, sockaddr *fromWhom)
 		if(FD_ISSET(socketDescriptor, readfds))
 		{
 			recvfrom(socketDescriptor, &buf, sizeof buf, 0, fromWhom, &fromWhomLength);
-			//report(&buf, sizeof buf);
 			printf("Packet receieved! (probably)\n");
+            report(buf, sizeof buf);
 		}
 	}
 	printf("listen() end\n");
@@ -677,7 +687,7 @@ int main(int argc, const char** argv)
     for(int i = 0; i < numberOfPings; i++)
     {
         ping(outSocketDescriptor,REQ_DATASIZE);
-        listen(outSocketDescriptor,(sockaddr *) &sourceSocket);
+        listen(inSocketDescriptor,(sockaddr *) &sourceSocket);
     }
 	printf("main() end\n");
 	printf("------------------\n");
