@@ -188,7 +188,6 @@ void report(char* buf, int length)
         printf("Ident = %d \t ID = %d\n", ident, icmpHeader->icmp_id);
     }
     printf("Seq: %d \n", icmpHeader->icmp_seq);
-    /* Packet meant for our computer? (icmpHeader->icmp_id == pid) */
 	/* Any missing packets? icmp_seq */
 	/* Delays for each packet */
 	/* Print it! */
@@ -631,10 +630,8 @@ int main(int argc, const char** argv)
 	sourceSocket.sin_addr = srcIP;
 	sourceSocket.sin_family = AF_INET;
 	ident = getpid() & 0xFFFF;
-	int inSocketDescriptor;
-	int outSocketDescriptor;
-	inSocketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
-	outSocketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
+	int inSocketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
+	int outSocketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	bind(outSocketDescriptor,&whereto, sizeof(sourceSocket));
     buildPing(REQ_DATASIZE, 0);
     for(int i = 0; i < numberOfPings; i++)
