@@ -198,8 +198,7 @@ void report(char* receivedPacketBuffer, int length)
  
     listen()
  
-    This function receives ECHO_REPLY packets sent to the host computer,
-    and determines if they are destined for our host computer.
+    This function receives ECHO_REPLY packets sent to the host computer.
  
  */
 void listen(int socketDescriptor, sockaddr *fromWhom)
