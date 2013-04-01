@@ -528,6 +528,11 @@ int main(int argc, const char** argv)
 			{
 				excludingPing = true;
 				pingsToExclude = atoi(argv[i+1]);
+                if(pingsToExclude >= numberOfPings)
+                {
+                    printf("Trying to exclude more pings than you send huh? Not funny.\n");
+                    exit(0);
+                }
 				printf("Flag -e set! %d earliest pings to be excluded from final statistics.\n", pingsToExclude);
 				i++;
 			}
@@ -641,7 +646,14 @@ int main(int argc, const char** argv)
 	bind(outSocketDescriptor,&whereto, sizeof(sourceSocket));
     printf("----------------------------------\n");
     buildPing(REQ_DATASIZE, 0);
-    for(int i = 0; i < numberOfPings; i++)
+    if(excludingPing)
+    {
+        for(int i = 0; i < pingsToExclude; i++)
+        {
+            ping(outSocketDescriptor,REQ_DATASIZE);
+        }
+    }
+    for(int i = 0; i < numberOfPings-pingsToExclude; i++)
     {
         ping(outSocketDescriptor,REQ_DATASIZE);
         listen(inSocketDescriptor,(sockaddr *) &sourceSocket);
