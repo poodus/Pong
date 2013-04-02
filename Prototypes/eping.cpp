@@ -102,17 +102,18 @@ static u_short checksum(u_short *ICMPHeader, int len)
          * sequential 16 bit words to it, and at the end, fold back all the
          * carry bits from the top 16 bits into the lower 16 bits.
          */
-        while (nleft > 1)  {
-
+        while (nleft > 1)
+        {
             sum += *ICMPPointer;
 			ICMPPointer++;
             nleft -= 2;
         }
 
         /* mop up an odd byte, if necessary */
-        if (nleft == 1) {
-                *(u_char *)(&answer) = *(u_char *)ICMPPointer;
-                sum += answer;
+        if (nleft == 1)
+        {
+            *(u_char *)(&answer) = *(u_char *)ICMPPointer;
+            sum += answer;
         }
 
         /* add back carry outs from top 16 bits to low 16 bits */
@@ -131,7 +132,7 @@ static u_short checksum(u_short *ICMPHeader, int len)
     It computes the ICMP checksum and sends the packet to the address
     specified in main().
  
- */
+*/
 void ping(int socketDescriptor,int REQ_DATASIZE)
 {
     
@@ -174,12 +175,12 @@ void ping(int socketDescriptor,int REQ_DATASIZE)
     It is called by listen().
  
  */
-void report(char* buf, int length)
+void report(char* receivedPacketBuffer, int length)
 {
     /* Create ICMP struct to hold the received data */
     struct icmp *icmp;
     /* Format the received data into the ICMP struct */
-    icmp = (struct icmp *) (buf + length);
+    icmp = (struct icmp *) (receivedPacketBuffer + length);
     /* Check if the packet was meant for our computer using the ICMP id,
      which we set to the process ID */
     if(icmpHeader->icmp_id != ident)
@@ -187,7 +188,7 @@ void report(char* buf, int length)
         printf("Not our packet\n");
         printf("Ident = %d \t ID = %d\n", ident, icmpHeader->icmp_id);
     }
-    printf("Seq: %d \n", icmpHeader->icmp_seq);
+    printf("Seq : %d \n", icmpHeader->icmp_seq);
 	/* Any missing packets? icmp_seq */
 	/* Delays for each packet */
 	/* Print it! */
@@ -197,14 +198,13 @@ void report(char* buf, int length)
  
     listen()
  
-    This function receives ECHO_REPLY packets sent to the host computer,
-    and determines if they are destined for our host computer.
+    This function receives ECHO_REPLY packets sent to the host computer.
  
  */
 void listen(int socketDescriptor, sockaddr *fromWhom)
 {
 	// Setting some flags needed for select()
-	char buf[512];
+	char receivedPacketBuffer[512];
 	fd_set *readfds;
 	FD_SET(socketDescriptor, readfds);
 	struct timeval timeout;
@@ -220,15 +220,15 @@ void listen(int socketDescriptor, sockaddr *fromWhom)
 	}
 	else if(selectStatus == 0)
 	{
-		printf("I'm tired of waiting. Timeout occurred. Packet took too long to reply.\n");
+		printf("I'm tired of waiting. Timeout.\n");
 	}
 	else
 	{
 		if(FD_ISSET(socketDescriptor, readfds))
 		{
-			recvfrom(socketDescriptor, &buf, sizeof buf, 0, fromWhom, &fromWhomLength);
-			printf("RECEIVED\t");
-            report(buf, sizeof buf);
+			recvfrom(socketDescriptor, &receivedPacketBuffer, sizeof receivedPacketBuffer, 0, fromWhom, &fromWhomLength);
+			printf("RECEIVED ");
+            report(receivedPacketBuffer, sizeof receivedPacketBuffer);
 		}
 	}
 }
@@ -267,12 +267,11 @@ void buildPing(int REQ_DATASIZE, int seq)
 char *argv[2];
 int main(int argc, const char** argv)
 {
-	printf("------------------\n");
+	printf("----------------------------------\n");
 	// REMOVE THIS LATER
 	const int REQ_DATASIZE = 50;
-	// STOP REMOVING
 	
-	printf("argc = %d\n", argc);\
+	//printf("argc = %d\n", argc);
 	//const char* flag[2];
 	
 	const char* destination = argv[1];
@@ -529,6 +528,11 @@ int main(int argc, const char** argv)
 			{
 				excludingPing = true;
 				pingsToExclude = atoi(argv[i+1]);
+                if(pingsToExclude >= numberOfPings)
+                {
+                    printf("Trying to exclude more pings than you send huh? Not funny.\n");
+                    exit(0);
+                }
 				printf("Flag -e set! %d earliest pings to be excluded from final statistics.\n", pingsToExclude);
 				i++;
 			}
@@ -559,7 +563,7 @@ int main(int argc, const char** argv)
 			printf("Flag not recognized, \"%s\"\n",argv[i]);
 		}
 	}
-	printf("Flags are set and heading out to %s\n",argv[1]);
+	printf("Destination IP set to: %s\n", argv[1]);
 	char hostName[128];
 	gethostname(hostName, 128);
 	if((hostName) == NULL)
@@ -583,12 +587,14 @@ int main(int argc, const char** argv)
 	socketAddress = (struct sockaddr_in *)&whereto;
 	if(inet_pton(AF_INET,destination,&IPHeader.destinationIPAddress)!=1)
 	{
-		// Add error message, etc.
+		// TODO Add error message
 		printf("inet_pton error for IP Header\n");
+        exit(0);
 	}
 	if(inet_pton(AF_INET,destination,&(socketAddress->sin_addr))!=1)
 	{
 		printf("inet_pton error for Socket Address\n");
+        exit(0);
 	}
 	/*
 	
@@ -602,10 +608,12 @@ int main(int argc, const char** argv)
 	{
 		// Add error message, etc.
 		printf("inet_pton error for IP Header\n");
+        exit(0);
 	}
 	if(inet_pton(AF_INET,destination,&(socketAddress->sin_addr))!=1)
 	{
 		printf("inet_pton error for Socket Address\n");
+        exit(0);
 	}
 	/*
 	
@@ -617,10 +625,12 @@ int main(int argc, const char** argv)
 	{
 		int error=WSAGetLastError();
 		printf((char*)error);
+        exit(0);
 	}
 	if(InetPton(AF_INET,destination,&(socketAddress->sin_addr))!=1)
 	{
 		printf("inet_pton error for Socket Address\n");
+        exit(0);
 	}
 	InetPton(AF_INET,hostIP,&IPHeader.sourceIPAddress);
 	#endif
@@ -630,14 +640,23 @@ int main(int argc, const char** argv)
 	sourceSocket.sin_addr = srcIP;
 	sourceSocket.sin_family = AF_INET;
 	ident = getpid() & 0xFFFF;
+    /* Socket descriptors for sending and receiving traffic */
 	int inSocketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	int outSocketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	bind(outSocketDescriptor,&whereto, sizeof(sourceSocket));
+    printf("----------------------------------\n");
     buildPing(REQ_DATASIZE, 0);
-    for(int i = 0; i < numberOfPings; i++)
+    if(excludingPing)
+    {
+        for(int i = 0; i < pingsToExclude; i++)
+        {
+            ping(outSocketDescriptor,REQ_DATASIZE);
+        }
+    }
+    for(int i = 0; i < numberOfPings-pingsToExclude; i++)
     {
         ping(outSocketDescriptor,REQ_DATASIZE);
         listen(inSocketDescriptor,(sockaddr *) &sourceSocket);
     }
-	printf("------------------\n");
+	printf("----------------------------------\n");
 }
