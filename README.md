@@ -7,12 +7,9 @@ NDSU Capstone Project 2013
 We're building a flexible ping utility, which will be command-line executable.
 
 
-Contributors
-==============
-@drsir - Chris Berstler  - Christopher.Berstler {at} my.ndsu.edu
+# CONTRIBUTORS
 
-@jrgeiser Jeff Geiser - Jeffery.Geiser {at} my.ndsu.edu
-
-@poodus - Shane Reetz - Shane.Reetz {at} my.ndsu.edu
-
-@TheIronMarx - Sam Stutsman - Samuel.Stutsman {at} my.ndsu.edu
+- [Chris Berstler](https://github.com/drsir)
+- [Jeff Geiser](https://github.com/jrgeiser)
+- [Shane Reetz](https://github.com/poodus)
+- [Sam Stutsman](https://github.com/TheIronMarx)
