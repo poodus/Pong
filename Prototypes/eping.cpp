@@ -79,9 +79,8 @@ tagIPHeader IPHeader;
 u_char outpack[100];
 
 
-// Variable to see if the packet was sent
 int sent;
-int ident;
+int processID;
 
 /*
 
@@ -108,14 +107,14 @@ static u_short checksum(u_short *ICMPHeader, int len)
 			ICMPPointer++;
             nleft -= 2;
         }
-
+    
         /* mop up an odd byte, if necessary */
         if (nleft == 1)
         {
             *(u_char *)(&answer) = *(u_char *)ICMPPointer;
             sum += answer;
         }
-
+    
         /* add back carry outs from top 16 bits to low 16 bits */
         sum = (sum >> 16) + (sum & 0xffff);     /* add hi 16 to low 16 */
         sum += (sum >> 16);                     /* add carry */
@@ -133,23 +132,16 @@ static u_short checksum(u_short *ICMPHeader, int len)
     specified in main().
  
 */
-void ping(int socketDescriptor,int REQ_DATASIZE)
+void ping(int socketDescriptor,int datagramSize)
 {
-    
 	// Fill in some data to send
-
 	// Save tick count when sent (milliseconds)
-
 	// Compute checksum
-	
 	icmpHeader->icmp_cksum =0;
 	icmpHeader->icmp_cksum = checksum((u_short *)icmpHeader, sizeof(*icmpHeader));
-	// icmpHeader->icmp_cksum = htons(63231);
-	
 
 	// Send the packet
 	sent = sendto(socketDescriptor, (char *)outpack, 64, 0, &whereto, sizeof(struct sockaddr));
-
 
 	// Print out if the packet sent or not
 	if(sent > 0)
@@ -183,10 +175,10 @@ void report(char* receivedPacketBuffer, int length)
     icmp = (struct icmp *) (receivedPacketBuffer + length);
     /* Check if the packet was meant for our computer using the ICMP id,
      which we set to the process ID */
-    if(icmpHeader->icmp_id != ident)
+    if(icmpHeader->icmp_id != processID)
     {
         printf("Not our packet\n");
-        printf("Ident = %d \t ID = %d\n", ident, icmpHeader->icmp_id);
+        printf("processID = %d \t ID = %d\n", processID, icmpHeader->icmp_id);
     }
     printf("Seq : %d \n", icmpHeader->icmp_seq);
 	/* Any missing packets? icmp_seq */
@@ -198,12 +190,13 @@ void report(char* receivedPacketBuffer, int length)
  
     listen()
  
-    This function receives ECHO_REPLY packets sent to the host computer.
+    This function receives ECHO_REPLY packets sent to the host computer,
+    and passes the information off to report()
  
  */
 void listen(int socketDescriptor, sockaddr *fromWhom)
 {
-	// Setting some flags needed for select()
+	// Setting some variables needed for select()
 	char receivedPacketBuffer[512];
 	fd_set *readfds;
 	FD_SET(socketDescriptor, readfds);
@@ -243,17 +236,17 @@ void listen(int socketDescriptor, sockaddr *fromWhom)
     set in main().
  
  */
-void buildPing(int REQ_DATASIZE, int seq)
+void buildPing(int datagramSize, int seq)
 {
 	icmpHeader = (struct icmp *)outpack;
 	icmpHeader->icmp_type = 8;
 	icmpHeader->icmp_code = 0;
 	icmpHeader->icmp_cksum = 0;
 	icmpHeader->icmp_seq = seq;
-	icmpHeader->icmp_id = ident;
+	icmpHeader->icmp_id = processID;
 	IPHeader.protocol = 1;
 	IPHeader.timeToLive = 64; //Recommended value, according to the internet.
-	IPHeader.versionHeaderLength = sizeof(struct tagIPHeader) + 64;
+	IPHeader.versionHeaderLength = sizeof(struct tagIPHeader) + 64; // TODO 64 shouldn't be hardcoded
 }
 
 /*
@@ -268,18 +261,19 @@ char *argv[2];
 int main(int argc, const char** argv)
 {
 	printf("----------------------------------\n");
-	// REMOVE THIS LATER
-	const int REQ_DATASIZE = 50;
-	
-	//printf("argc = %d\n", argc);
-	//const char* flag[2];
-	
+	const int datagramSize = 50;
+    
+    /*
+     
+        Variables for command line flag processing
+        
+    */
 	const char* destination = argv[1];
 	bool timeBetweenReq = 0; // -q
 		int msecsBetweenReq = 0;
 	bool timeBetweenRepReq = 0; // -b
 		int msecsBetweenRepReq = 0;
-	bool datagramSize = 0; // -d
+	//bool datagramSize = 0; // -d
 		int bytesDatagram = 0;
 	bool payloadSize = 0; // -p
 		int bytesPayload = 0;
@@ -306,7 +300,6 @@ int main(int argc, const char** argv)
 	for(int i = 2; i < argc; i++) {
 	// argv[0] is the ./a which is input
 	// argv[1] is the IPv4 address, MUST be valid
-		
 		if(strcmp(argv[i],"-q") == 0)
 		{
 			if(timeBetweenRepReq || randTimeMinMax || randTimeAvgStd)
@@ -359,7 +352,7 @@ int main(int argc, const char** argv)
 			{
 				if(i + 1 < argc && atoi(argv[i+1]) > 0)
 				{
-					datagramSize = true;
+					//datagramSize = true;
 					bytesDatagram = atoi(argv[i+1]);
 					printf("Flag -d set! Datagram will be %d bytes large.\n", bytesDatagram);
 					i++;
@@ -639,23 +632,23 @@ int main(int argc, const char** argv)
 	sourceSocket.sin_port = htons(3490);
 	sourceSocket.sin_addr = srcIP;
 	sourceSocket.sin_family = AF_INET;
-	ident = getpid() & 0xFFFF;
+	processID = getpid() & 0xFFFF;
     /* Socket descriptors for sending and receiving traffic */
 	int inSocketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	int outSocketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	bind(outSocketDescriptor,&whereto, sizeof(sourceSocket));
     printf("----------------------------------\n");
-    buildPing(REQ_DATASIZE, 0);
+    buildPing(datagramSize, 0);
     if(excludingPing)
     {
         for(int i = 0; i < pingsToExclude; i++)
         {
-            ping(outSocketDescriptor,REQ_DATASIZE);
+            ping(outSocketDescriptor, datagramSize);
         }
     }
     for(int i = 0; i < numberOfPings-pingsToExclude; i++)
     {
-        ping(outSocketDescriptor,REQ_DATASIZE);
+        ping(outSocketDescriptor, datagramSize);
         listen(inSocketDescriptor,(sockaddr *) &sourceSocket);
     }
 	printf("----------------------------------\n");
