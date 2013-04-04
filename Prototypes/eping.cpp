@@ -86,7 +86,8 @@ int processID;
 
 	Checksum()
 
-	Simple checksum function for ICMP Header. This implentation was taken from Mike Musss' version of ping.c
+	Simple checksum function for ICMP Header. This implentation was 
+    adapted from Mike Musss' version of ping.c
 
 */
 static u_short checksum(u_short *ICMPHeader, int len)
@@ -97,10 +98,10 @@ static u_short checksum(u_short *ICMPHeader, int len)
         u_short answer = 0;
 
         /*
-         * Our algorithm is simple, using a 32 bit accumulator (sum), we add
-         * sequential 16 bit words to it, and at the end, fold back all the
-         * carry bits from the top 16 bits into the lower 16 bits.
-         */
+           Our algorithm is simple, using a 32 bit accumulator (sum), we add
+           sequential 16 bit words to it, and at the end, fold back all the
+           carry bits from the top 16 bits into the lower 16 bits.
+        */
         while (nleft > 1)
         {
             sum += *ICMPPointer;
@@ -111,7 +112,7 @@ static u_short checksum(u_short *ICMPHeader, int len)
         /* mop up an odd byte, if necessary */
         if (nleft == 1)
         {
-            *(u_char *)(&answer) = *(u_char *)ICMPPointer;
+            *(u_char *)(&answer) = *(u_char *) ICMPPointer;
             sum += answer;
         }
     
@@ -205,8 +206,7 @@ void listen(int socketDescriptor, sockaddr *fromWhom)
 	timeout.tv_usec = 0; // timeuot period, microseconds 1,000,000 micro = second
 	socklen_t fromWhomLength;
 	fromWhomLength = sizeof fromWhom;
-	int selectStatus;
-	selectStatus = select(socketDescriptor+1, readfds, NULL, NULL, &timeout);
+	int selectStatus = select(socketDescriptor+1, readfds, NULL, NULL, &timeout);
 	if(selectStatus == -1)
 	{
 		printf("Something terrible has happened! Error in select()\n");
@@ -238,8 +238,8 @@ void listen(int socketDescriptor, sockaddr *fromWhom)
  */
 void buildPing(int datagramSize, int seq)
 {
-	icmpHeader = (struct icmp *)outpack;
-	icmpHeader->icmp_type = 8;
+	icmpHeader = (struct icmp *) outpack;
+	icmpHeader->icmp_type = 8; // This shouldn't change
 	icmpHeader->icmp_code = 0;
 	icmpHeader->icmp_cksum = 0;
 	icmpHeader->icmp_seq = seq;
@@ -570,7 +570,7 @@ int main(int argc, const char** argv)
 	whereto.sa_family=AF_INET;
 	/*
 	
-		UNIX block for setting the address
+		UNIX block for setting the source and destination IP address
 		
 	*/
 	#if __unix__
@@ -591,13 +591,13 @@ int main(int argc, const char** argv)
 	}
 	/*
 	
-		APPLE block for setting the address
+		APPLE block for setting the source and destination IP address
 		
 	*/
 	#elif __APPLE__
-	inet_pton(AF_INET,hostIP->h_name,&srcIP);
-	socketAddress = (struct sockaddr_in *)&whereto;
-	if(inet_pton(AF_INET,destination,&IPHeader.destinationIPAddress)!=1)
+	inet_pton(AF_INET,hostIP->h_name, &srcIP);
+	socketAddress = (struct sockaddr_in *) &whereto;
+	if(inet_pton(AF_INET,destination, &IPHeader.destinationIPAddress)!=1)
 	{
 		// Add error message, etc.
 		printf("inet_pton error for IP Header\n");
@@ -610,7 +610,7 @@ int main(int argc, const char** argv)
 	}
 	/*
 	
-		WINDOWS block for setting the address
+		WINDOWS block for setting the source and destination IP address
 		
 	*/
 	#elif __WINDOWS__
@@ -627,11 +627,17 @@ int main(int argc, const char** argv)
 	}
 	InetPton(AF_INET,hostIP,&IPHeader.sourceIPAddress);
 	#endif
-	socketAddress->sin_port=htons(3490);
-	sockaddr_in sourceSocket;//The sockAddr to listen on
+    /*
+     
+        Set up the sockets
+     
+    */
+	socketAddress->sin_port = htons(3490);
+	sockaddr_in sourceSocket;
 	sourceSocket.sin_port = htons(3490);
 	sourceSocket.sin_addr = srcIP;
 	sourceSocket.sin_family = AF_INET;
+    /* We use the process ID from this program as our ICMP id */
 	processID = getpid() & 0xFFFF;
     /* Socket descriptors for sending and receiving traffic */
 	int inSocketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
@@ -639,6 +645,12 @@ int main(int argc, const char** argv)
 	bind(outSocketDescriptor,&whereto, sizeof(sourceSocket));
     printf("----------------------------------\n");
     buildPing(datagramSize, 0);
+    /*
+        
+        Execute the ping/listen functions. The first
+        statement is for ignoring pings.
+        
+    */
     if(excludingPing)
     {
         for(int i = 0; i < pingsToExclude; i++)
@@ -649,7 +661,9 @@ int main(int argc, const char** argv)
     for(int i = 0; i < numberOfPings-pingsToExclude; i++)
     {
         ping(outSocketDescriptor, datagramSize);
+        
         listen(inSocketDescriptor,(sockaddr *) &sourceSocket);
+        usleep(100000);
     }
 	printf("----------------------------------\n");
 }
