@@ -1,10 +1,11 @@
 ePing
 ==============
 
-NDSU Capstone Project 2013
-@authors Shane Reetz, Chris Berstler, Sam Stutsman, Jeff Geiser
-
 We're building a flexible ping utility, which will be command-line executable.
+We're also taking suggestions for a better name. ePing = Ericsson ping (since
+we're making this for Ericsson).
+
+Developed as a NDSU Capstone Project, Spring 2013
 
 
 # CONTRIBUTORS
