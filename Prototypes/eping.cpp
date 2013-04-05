@@ -663,7 +663,6 @@ int main(int argc, const char** argv)
         ping(outSocketDescriptor, datagramSize);
         
         listen(inSocketDescriptor,(sockaddr *) &sourceSocket);
-        usleep(100000);
     }
 	printf("----------------------------------\n");
 }
