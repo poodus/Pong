@@ -171,17 +171,18 @@ void ping(int socketDescriptor,int datagramSize)
 void report(char* receivedPacketBuffer, int length)
 {
     /* Create ICMP struct to hold the received data */
-    struct icmp *icmp;
+    struct icmp * receivedICMPHeader;
     /* Format the received data into the ICMP struct */
-    icmp = (struct icmp *) (receivedPacketBuffer + length);
+    printf("received buffer: %s length: %d\n", receivedPacketBuffer, length);
+    receivedICMPHeader = (struct icmp *) (receivedPacketBuffer + length);
     /* Check if the packet was meant for our computer using the ICMP id,
      which we set to the process ID */
-    if(icmpHeader->icmp_id != processID)
+    if(receivedICMPHeader->icmp_id != processID)
     {
         printf("Not our packet\n");
-        printf("processID = %d \t ID = %d\n", processID, icmpHeader->icmp_id);
+        printf("processID = %d \t ID = %d\n", processID, receivedICMPHeader->icmp_id);
     }
-    printf("Seq : %d \n", icmpHeader->icmp_seq);
+    printf("Seq : %d \n", receivedICMPHeader->icmp_seq);
 	/* Any missing packets? icmp_seq */
 	/* Delays for each packet */
 	/* Print it! */
@@ -195,18 +196,18 @@ void report(char* receivedPacketBuffer, int length)
     and passes the information off to report()
  
  */
-void listen(int socketDescriptor, sockaddr *fromWhom)
+void listen(int socketDescriptor, sockaddr * fromWhom)
 {
 	// Setting some variables needed for select()
-	char receivedPacketBuffer[512];
-	fd_set *readfds;
-	FD_SET(socketDescriptor, readfds);
+	char receivedPacketBuffer[256];
+	fd_set readfds;
+    FD_ZERO(&readfds);
+	FD_SET(socketDescriptor, &readfds);
 	struct timeval timeout;
 	timeout.tv_sec = 2; // timeout period, seconds (added second, if that matters)
 	timeout.tv_usec = 0; // timeuot period, microseconds 1,000,000 micro = second
-	socklen_t fromWhomLength;
-	fromWhomLength = sizeof fromWhom;
-	int selectStatus = select(socketDescriptor+1, readfds, NULL, NULL, &timeout);
+	int selectStatus = select(socketDescriptor+1, &readfds, NULL, NULL, &timeout);
+    socklen_t len = sizeof fromWhom;
 	if(selectStatus == -1)
 	{
 		printf("Something terrible has happened! Error in select()\n");
@@ -217,10 +218,15 @@ void listen(int socketDescriptor, sockaddr *fromWhom)
 	}
 	else
 	{
-		if(FD_ISSET(socketDescriptor, readfds))
+
+		if(FD_ISSET(socketDescriptor, &readfds))
 		{
-			recvfrom(socketDescriptor, &receivedPacketBuffer, sizeof receivedPacketBuffer, 0, fromWhom, &fromWhomLength);
-			printf("RECEIVED ");
+            //n = recvfrom(sockfd, recvbuf, sizeof(recvbuf), 0, sarecv, &len);
+            //(struct sockaddr *)
+            //printf("FromWHOM, bitch. %s", fromWhom);       (socklen_t *)sizeof(fromWhom)
+			int bytesReceived = recvfrom(socketDescriptor, &receivedPacketBuffer, sizeof(&receivedPacketBuffer), 0, fromWhom, &len);
+            //printf("OH DEAR! AN ERROR! : %s\n", strerror(errno));
+			printf("RECEIVED: %d\n", bytesReceived);
             report(receivedPacketBuffer, sizeof receivedPacketBuffer);
 		}
 	}
@@ -640,9 +646,7 @@ int main(int argc, const char** argv)
     /* We use the process ID from this program as our ICMP id */
 	processID = getpid() & 0xFFFF;
     /* Socket descriptors for sending and receiving traffic */
-	int inSocketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
-	int outSocketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
-	bind(outSocketDescriptor,&whereto, sizeof(sourceSocket));
+	int socketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
     printf("----------------------------------\n");
     buildPing(datagramSize, 0);
     /*
@@ -655,14 +659,13 @@ int main(int argc, const char** argv)
     {
         for(int i = 0; i < pingsToExclude; i++)
         {
-            ping(outSocketDescriptor, datagramSize);
+            ping(socketDescriptor, datagramSize);
         }
     }
     for(int i = 0; i < numberOfPings-pingsToExclude; i++)
     {
-        ping(outSocketDescriptor, datagramSize);
-        
-        listen(inSocketDescriptor,(sockaddr *) &sourceSocket);
+        ping(socketDescriptor, datagramSize);
+        listen(socketDescriptor,(sockaddr *) &sourceSocket);
     }
 	printf("----------------------------------\n");
 }
