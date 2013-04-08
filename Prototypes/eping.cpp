@@ -177,12 +177,24 @@ void report(char* receivedPacketBuffer, int length)
     receivedICMPHeader = (struct icmp *) (receivedPacketBuffer + length);
     /* Check if the packet was meant for our computer using the ICMP id,
      which we set to the process ID */
-    if(receivedICMPHeader->icmp_id != processID)
+    if (receivedICMPHeader->icmp_type == ICMP_ECHOREPLY)
     {
-        printf("Not our packet\n");
-        printf("processID = %d \t ID = %d\n", processID, receivedICMPHeader->icmp_id);
+        printf("It's a reply\n");
+        if(receivedICMPHeader->icmp_id != processID)
+        {
+            printf("Not our packet\n");
+            printf("processID = %d \t ID = %d\n", processID, receivedICMPHeader->icmp_id);
+        }
     }
+    else
+    {
+        printf("Not a REPLY\n");
+    }
+    printf("Type: %d\n", receivedICMPHeader->icmp_type);
     printf("Seq : %d \n", receivedICMPHeader->icmp_seq);
+    printf("Checksum: %d \n", receivedICMPHeader->icmp_cksum);
+    printf("Code: %d\n\n", receivedICMPHeader->icmp_code);
+    printf("Sizeofreceivedbuf: %lu\n", sizeof receivedPacketBuffer);
 	/* Any missing packets? icmp_seq */
 	/* Delays for each packet */
 	/* Print it! */
