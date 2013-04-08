@@ -1,29 +1,29 @@
 /*
  
-    ePing
+ ePing
  
-    Using the Internet Control Message Protocol (ICMP) "ECHO" facility,
-    measure round-trip-delays and packet loss across network paths.
+ Using the Internet Control Message Protocol (ICMP) "ECHO" facility,
+ measure round-trip-delays and packet loss across network paths.
  
-*/
+ */
 
 //TODO remove this when debugging is done
 #include <iostream>
 
 
 /*
-
-    Imports
-
-*/
+ 
+ Imports
+ 
+ */
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/file.h>
 #include <sys/time.h>
-#include <sys/signal.h>
-#include <sys/unistd.h>
 #include <sys/select.h>
-
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
@@ -31,6 +31,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -47,26 +48,7 @@
 
 /*
  
-	IP HEADER struct
- 
-*/
-struct tagIPHeader
-{
-	u_char versionHeaderLength;
-	u_char typeOfService;
-	short totalLength;
-	short ID;
-	short flagsFragOff;
-	u_char timeToLive;
-	u_char protocol;
-	u_short checksum;
-	struct in_addr sourceIPAddress;
-	struct in_addr destinationIPAddress;
-};
-
-/*
- 
-	Initialize Structs
+ Initialize Structs
  
 */
 
@@ -75,82 +57,91 @@ struct sockaddr whereto;
 struct in_addr destIP;
 struct in_addr srcIP;
 struct icmp * icmpHeader;
-tagIPHeader IPHeader;
-u_char outpack[100];
+struct icmp * receivedICMPHeader;
+struct icmp * receivedIPHeader;
+struct ip * ipHeader;
+u_char * packet[100];
+u_char * packetIP[100];
 
-
+/*
+ 
+ Global Variables
+ 
+*/
 int sent;
 int processID;
+int socketDescriptor;
+int icmpPayloadLength = 20;
+int pingsToSend = 5;
+int pingsSent = 0;
 
 /*
-
-	Checksum()
-
-	Simple checksum function for ICMP Header. This implentation was 
-    adapted from Mike Musss' version of ping.c
-
-*/
+ 
+ Checksum()
+ 
+ Simple checksum function for ICMP Header. This implentation was
+ adapted from Mike Musss' version of ping.c
+ 
+ */
 static u_short checksum(u_short *ICMPHeader, int len)
 {
-        register int nleft = len;
-        register u_short *ICMPPointer = ICMPHeader;
-        register int sum = 0;
-        u_short answer = 0;
-
-        /*
-           Our algorithm is simple, using a 32 bit accumulator (sum), we add
-           sequential 16 bit words to it, and at the end, fold back all the
-           carry bits from the top 16 bits into the lower 16 bits.
-        */
-        while (nleft > 1)
-        {
-            sum += *ICMPPointer;
-			ICMPPointer++;
-            nleft -= 2;
-        }
+    register int nleft = len;
+    register u_short *ICMPPointer = ICMPHeader;
+    register int sum = 0;
+    u_short answer = 0;
     
-        /* mop up an odd byte, if necessary */
-        if (nleft == 1)
-        {
-            *(u_char *)(&answer) = *(u_char *) ICMPPointer;
-            sum += answer;
-        }
+    /*
+     Our algorithm is simple, using a 32 bit accumulator (sum), we add
+     sequential 16 bit words to it, and at the end, fold back all the
+     carry bits from the top 16 bits into the lower 16 bits.
+     */
+    while (nleft > 1)
+    {
+        sum += *ICMPPointer;
+        ICMPPointer++;
+        nleft -= 2;
+    }
     
-        /* add back carry outs from top 16 bits to low 16 bits */
-        sum = (sum >> 16) + (sum & 0xffff);     /* add hi 16 to low 16 */
-        sum += (sum >> 16);                     /* add carry */
-        answer = (u_short)~sum;                          /* truncate to 16 bits */
-        return(answer);
+    /* mop up an odd byte, if necessary */
+    if (nleft == 1)
+    {
+        *(u_char *)(&answer) = *(u_char *) ICMPPointer;
+        sum += answer;
+    }
+    
+    /* add back carry outs from top 16 bits to low 16 bits */
+    sum = (sum >> 16) + (sum & 0xffff);     /* add hi 16 to low 16 */
+    sum += (sum >> 16);                     /* add carry */
+    answer = (u_short)~sum;                          /* truncate to 16 bits */
+    return(answer);
 }
-
 
 /*
  
-    ping()
+ ping()
  
-    This method actually sends our ECHO_REQUEST across the internet.
-    It computes the ICMP checksum and sends the packet to the address
-    specified in main().
+ This method actually sends our ECHO_REQUEST across the internet.
+ It computes the ICMP checksum and sends the packet to the address
+ specified in main().
  
-*/
-void ping(int socketDescriptor,int datagramSize)
+ */
+void ping(int socketDescriptor, int icmpPayloadLength)
 {
 	// Fill in some data to send
 	// Save tick count when sent (milliseconds)
 	// Compute checksum
-	icmpHeader->icmp_cksum =0;
+	icmpHeader->icmp_cksum = 0;
 	icmpHeader->icmp_cksum = checksum((u_short *)icmpHeader, sizeof(*icmpHeader));
-
 	// Send the packet
-	sent = sendto(socketDescriptor, (char *)outpack, 64, 0, &whereto, sizeof(struct sockaddr));
-
+	sent = sendto(socketDescriptor, packet, icmpPayloadLength+8, 0, (struct sockaddr *)&whereto, sizeof(&whereto));
 	// Print out if the packet sent or not
 	if(sent > 0)
 	{
 		printf("SENT ");
+        printf("Seq : %d\t", icmpHeader->icmp_seq);
         // Increment packet sequence number
         icmpHeader->icmp_seq++;
-        printf("Seq : %d\t", icmpHeader->icmp_seq);
+        pingsSent++;
 	}
 	else
 	{
@@ -158,28 +149,25 @@ void ping(int socketDescriptor,int datagramSize)
 	}
 }
 
-
 /*
  
-    report()
+ report()
  
-    This function grabs relevent data from the ICMP ECHO_REPLY and
-    prints out the statistics of the pings ran with the program.
-    It is called by listen().
+ This function grabs relevent data from the ICMP ECHO_REPLY and
+ prints out the statistics of the pings ran with the program.
+ It is called by listen().
  
  */
-void report(char* receivedPacketBuffer, int length)
+void report(char* receivedPacketBuffer)
 {
-    /* Create ICMP struct to hold the received data */
-    struct icmp * receivedICMPHeader;
+    struct ip * receivedIPHeader = (struct ip *) receivedPacketBuffer;
+	int headerLength = receivedIPHeader->ip_hl << 2;
     /* Format the received data into the ICMP struct */
-    printf("received buffer: %s length: %d\n", receivedPacketBuffer, length);
-    receivedICMPHeader = (struct icmp *) (receivedPacketBuffer + length);
+    receivedICMPHeader = (struct icmp *)(receivedPacketBuffer + headerLength);
     /* Check if the packet was meant for our computer using the ICMP id,
      which we set to the process ID */
-    if (receivedICMPHeader->icmp_type == ICMP_ECHOREPLY)
+    if (receivedICMPHeader->icmp_type == 0)
     {
-        printf("It's a reply\n");
         if(receivedICMPHeader->icmp_id != processID)
         {
             printf("Not our packet\n");
@@ -188,30 +176,26 @@ void report(char* receivedPacketBuffer, int length)
     }
     else
     {
-        printf("Not a REPLY\n");
+        printf("Not a reply\n");
     }
     printf("Type: %d\n", receivedICMPHeader->icmp_type);
     printf("Seq : %d \n", receivedICMPHeader->icmp_seq);
     printf("Checksum: %d \n", receivedICMPHeader->icmp_cksum);
     printf("Code: %d\n\n", receivedICMPHeader->icmp_code);
-    printf("Sizeofreceivedbuf: %lu\n", sizeof receivedPacketBuffer);
-	/* Any missing packets? icmp_seq */
-	/* Delays for each packet */
-	/* Print it! */
 }
 
 /*
  
-    listen()
+ listen()
  
-    This function receives ECHO_REPLY packets sent to the host computer,
-    and passes the information off to report()
+ This function receives ECHO_REPLY packets sent to the host computer,
+ and passes the information off to report()
  
- */
-void listen(int socketDescriptor, sockaddr * fromWhom)
+*/
+void listen(int socketDescriptor, sockaddr_in * fromWhom)
 {
 	// Setting some variables needed for select()
-	char receivedPacketBuffer[256];
+	char receivedPacketBuffer[512];
 	fd_set readfds;
     FD_ZERO(&readfds);
 	FD_SET(socketDescriptor, &readfds);
@@ -219,7 +203,8 @@ void listen(int socketDescriptor, sockaddr * fromWhom)
 	timeout.tv_sec = 2; // timeout period, seconds (added second, if that matters)
 	timeout.tv_usec = 0; // timeuot period, microseconds 1,000,000 micro = second
 	int selectStatus = select(socketDescriptor+1, &readfds, NULL, NULL, &timeout);
-    socklen_t len = sizeof fromWhom;
+
+    socklen_t fromWhomLength = sizeof(fromWhom);
 	if(selectStatus == -1)
 	{
 		printf("Something terrible has happened! Error in select()\n");
@@ -230,16 +215,14 @@ void listen(int socketDescriptor, sockaddr * fromWhom)
 	}
 	else
 	{
-
 		if(FD_ISSET(socketDescriptor, &readfds))
 		{
-            //n = recvfrom(sockfd, recvbuf, sizeof(recvbuf), 0, sarecv, &len);
-            //(struct sockaddr *)
-            //printf("FromWHOM, bitch. %s", fromWhom);       (socklen_t *)sizeof(fromWhom)
-			int bytesReceived = recvfrom(socketDescriptor, &receivedPacketBuffer, sizeof(&receivedPacketBuffer), 0, fromWhom, &len);
+            /*recvfrom(int sockfd, void *buf, size_t len, int flags,
+                     struct sockaddr *src_addr, socklen_t *addrlen);*/
+			ssize_t bytesReceived = recvfrom(socketDescriptor, (char *)receivedPacketBuffer, sizeof(receivedPacketBuffer), 0, (struct sockaddr *)&fromWhom, &fromWhomLength);
             //printf("OH DEAR! AN ERROR! : %s\n", strerror(errno));
-			printf("RECEIVED: %d\n", bytesReceived);
-            report(receivedPacketBuffer, sizeof receivedPacketBuffer);
+			printf("RECEIVED: %zd bytes\n", bytesReceived);
+            report(receivedPacketBuffer);
 		}
 	}
 }
@@ -247,77 +230,77 @@ void listen(int socketDescriptor, sockaddr * fromWhom)
 
 /*
  
-    buildPing()
+ buildPing()
  
-    buildPing() initializes the ICMP Header and IP Header structs, which
-    contain essential packet information. The IP address information is
-    set in main().
+ buildPing() initializes the ICMP Header and IP Header structs, which
+ contain essential packet information. The IP address information is
+ set in main().
  
- */
-void buildPing(int datagramSize, int seq)
+*/
+void buildPing()
 {
-	icmpHeader = (struct icmp *) outpack;
+	icmpHeader = (struct icmp *) packet;
+    ipHeader= (struct ip *) packetIP;
 	icmpHeader->icmp_type = 8; // This shouldn't change
 	icmpHeader->icmp_code = 0;
 	icmpHeader->icmp_cksum = 0;
-	icmpHeader->icmp_seq = seq;
+	icmpHeader->icmp_seq = 1;
 	icmpHeader->icmp_id = processID;
-	IPHeader.protocol = 1;
-	IPHeader.timeToLive = 64; //Recommended value, according to the internet.
-	IPHeader.versionHeaderLength = sizeof(struct tagIPHeader) + 64; // TODO 64 shouldn't be hardcoded
+	ipHeader->ip_p = 1;
+	ipHeader->ip_ttl = 64; //Recommended value, according to the internet.
+	ipHeader->ip_hl = 5;
 }
 
 /*
  
-    main()
+ main()
  
-    Where the magic happens. Command line flags are set, program
-    control is set.
+ Where the magic happens. Command line flags are set, program
+ control is set.
  
  */
 char *argv[2];
 int main(int argc, const char** argv)
 {
 	printf("----------------------------------\n");
-	const int datagramSize = 50;
     
     /*
      
-        Variables for command line flag processing
-        
-    */
+     Variables for command line flag processing
+     
+     */
 	const char* destination = argv[1];
 	bool timeBetweenReq = 0; // -q
-		int msecsBetweenReq = 0;
+    int msecsBetweenReq = 0;
 	bool timeBetweenRepReq = 0; // -b
-		int msecsBetweenRepReq = 0;
-	//bool datagramSize = 0; // -d
-		int bytesDatagram = 0;
+    int msecsBetweenRepReq = 0;
+	bool datagramSize = 0; // -d
+    int bytesDatagram = 0;
 	bool payloadSize = 0; // -p
-		int bytesPayload = 0;
+    int bytesPayload = 0;
 	bool randSizeMinMax = 0; // -l
-		int bytesSizeMin = 0;
-		int bytesSizeMax = 0;
+    int bytesSizeMin = 0;
+    int bytesSizeMax = 0;
 	bool randSizeAvgStd = 0; // -r
-		int bytesSizeAvg = 0;
-		int bytesSizeStd = 0;
+    int bytesSizeAvg = 0;
+    int bytesSizeStd = 0;
 	bool randTimeMinMax = 0; // -s
-		int msecsTimeMin = 0;
-		int msecsTimeMax = 0;
+    int msecsTimeMin = 0;
+    int msecsTimeMax = 0;
 	bool randTimeAvgStd = 0; // -t
-		int msecsTimeAvg = 0;
-		int msecsTimeStd = 0;
+    int msecsTimeAvg = 0;
+    int msecsTimeStd = 0;
 	bool increasingSize = 0; // -i
-		int sizeInitial = 0;
-		int sizeGrowth = 0;
+    int sizeInitial = 0;
+    int sizeGrowth = 0;
 	bool excludingPing = 0; // -e
-		int pingsToExclude = 0;
+    int pingsToExclude = 0;
 	bool multiplePings = 0; // -n
-		int numberOfPings = 5; // DEFAULT VALUE of 5
+    pingsToSend = 5; // DEFAULT VALUE of 5
 	
 	for(int i = 2; i < argc; i++) {
-	// argv[0] is the ./a which is input
-	// argv[1] is the IPv4 address, MUST be valid
+        // argv[0] is the ./a which is input
+        // argv[1] is the IPv4 address, MUST be valid
 		if(strcmp(argv[i],"-q") == 0)
 		{
 			if(timeBetweenRepReq || randTimeMinMax || randTimeAvgStd)
@@ -539,7 +522,7 @@ int main(int argc, const char** argv)
 			{
 				excludingPing = true;
 				pingsToExclude = atoi(argv[i+1]);
-                if(pingsToExclude >= numberOfPings)
+                if(pingsToExclude >= pingsToSend)
                 {
                     printf("Trying to exclude more pings than you send huh? Not funny.\n");
                     exit(0);
@@ -558,8 +541,8 @@ int main(int argc, const char** argv)
 			if(i + 1 < argc && atoi(argv[i+1]) > 0)
 			{
 				multiplePings = true;
-				numberOfPings = atoi(argv[i + 1]);
-				printf("Flag -n set! %d pings to be sent.\n", numberOfPings);
+				pingsToSend = atoi(argv[i + 1]);
+				printf("Flag -n set! %d pings to be sent.\n", pingsToSend);
 				i++;
 			}
 			else
@@ -583,55 +566,37 @@ int main(int argc, const char** argv)
 	}
 	hostent *hostIP;
 	hostIP=gethostbyname(hostName);
-	IPHeader.sourceIPAddress = srcIP;
-	IPHeader.destinationIPAddress = destIP;
 	whereto.sa_family=AF_INET;
 	/*
-	
-		UNIX block for setting the source and destination IP address
-		
-	*/
-	#if __unix__
-	printf("main() mark 4.5\n");
-	inet_pton(AF_INET,hostIP->h_name,&srcIP);
-	printf("main() mark 5 (unix)\n");
+     
+     UNIX block for setting the source and destination IP address
+     
+     */
+#if __unix__
 	socketAddress = (struct sockaddr_in *)&whereto;
-	if(inet_pton(AF_INET,destination,&IPHeader.destinationIPAddress)!=1)
-	{
-		// TODO Add error message
-		printf("inet_pton error for IP Header\n");
-        exit(0);
-	}
 	if(inet_pton(AF_INET,destination,&(socketAddress->sin_addr))!=1)
 	{
 		printf("inet_pton error for Socket Address\n");
         exit(0);
 	}
 	/*
-	
-		APPLE block for setting the source and destination IP address
-		
-	*/
-	#elif __APPLE__
-	inet_pton(AF_INET,hostIP->h_name, &srcIP);
-	socketAddress = (struct sockaddr_in *) &whereto;
-	if(inet_pton(AF_INET,destination, &IPHeader.destinationIPAddress)!=1)
-	{
-		// Add error message, etc.
-		printf("inet_pton error for IP Header\n");
-        exit(0);
-	}
+     
+     APPLE block for setting the source and destination IP address
+     
+     */
+#elif __APPLE__
+	socketAddress = (struct sockaddr_in *)&whereto;
 	if(inet_pton(AF_INET,destination,&(socketAddress->sin_addr))!=1)
 	{
 		printf("inet_pton error for Socket Address\n");
         exit(0);
 	}
 	/*
-	
-		WINDOWS block for setting the source and destination IP address
-		
-	*/
-	#elif __WINDOWS__
+     
+     WINDOWS block for setting the source and destination IP address
+     
+     */
+#elif __WINDOWS__
 	if(InetPton(AF_INET,destination,&IPHeader.destinationIPAddress)!=1)
 	{
 		int error=WSAGetLastError();
@@ -644,40 +609,33 @@ int main(int argc, const char** argv)
         exit(0);
 	}
 	InetPton(AF_INET,hostIP,&IPHeader.sourceIPAddress);
-	#endif
+#endif
     /*
      
-        Set up the sockets
+     Set up the sockets
      
-    */
-	socketAddress->sin_port = htons(3490);
+     */
+	
 	sockaddr_in sourceSocket;
-	sourceSocket.sin_port = htons(3490);
 	sourceSocket.sin_addr = srcIP;
 	sourceSocket.sin_family = AF_INET;
     /* We use the process ID from this program as our ICMP id */
 	processID = getpid() & 0xFFFF;
     /* Socket descriptors for sending and receiving traffic */
-	int socketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
+	socketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
     printf("----------------------------------\n");
-    buildPing(datagramSize, 0);
+    buildPing();
     /*
-        
-        Execute the ping/listen functions. The first
-        statement is for ignoring pings.
-        
-    */
-    if(excludingPing)
+     
+     Execute the ping/listen functions. The first
+     statement is for ignoring pings.
+     
+     */
+    
+    for (int i = 0; i < pingsToSend; i++)
     {
-        for(int i = 0; i < pingsToExclude; i++)
-        {
-            ping(socketDescriptor, datagramSize);
-        }
-    }
-    for(int i = 0; i < numberOfPings-pingsToExclude; i++)
-    {
-        ping(socketDescriptor, datagramSize);
-        listen(socketDescriptor,(sockaddr *) &sourceSocket);
+        ping(socketDescriptor, icmpPayloadLength);
+        listen(socketDescriptor, &sourceSocket);
     }
 	printf("----------------------------------\n");
 }
