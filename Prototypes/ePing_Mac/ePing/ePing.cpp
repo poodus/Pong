@@ -156,20 +156,13 @@ void ping(int socketDescriptor, int icmpPayloadLength)
 	icmpHeader->icmp_cksum = 0;
 	icmpHeader->icmp_cksum = checksum((u_short *)icmpHeader, sizeof(*icmpHeader));
     // Get time
-    
     //gettimeofday((struct timeval *)icmpHeader->icmp_data, NULL);
 	// Send the packet
-	sent = sendto(socketDescriptor, packet, icmpPayloadLength+8, 0, (struct sockaddr *)&whereto, sizeof(&whereto));
+	sent = sendto(socketDescriptor, packet, icmpPayloadLength+8, 0, &whereto, sizeof(struct sockaddr));
 	// Print out if the packet sent or not
 	if(sent > 0)
 	{
 		printf("SENT\n");
-//        printf("Type: %d\t", icmpHeader->icmp_type);
-//        printf("Code: %d\t", icmpHeader->icmp_code);
-//        printf("Seq : %d\t", icmpHeader->icmp_seq);
-//        printf("Checksum: %d \t\n", icmpHeader->icmp_cksum);
-        // Increment packet sequence number
-        icmpHeader->icmp_seq++;
         pingsSent++;
 	}
 	else
@@ -195,16 +188,15 @@ void report()
  
  listen()
  
- This function receives ECHO_REPLY packets sent to the host computer,
- and passes the information off to report()
+ This function receives ECHO_REPLY packets sent to the host computer
+ and does some basic processing.
  
 */
-void listen(int socketDescriptor, sockaddr_in * fromWhom)
+void listen(int socketDescriptor, sockaddr_in * fromWhom, bool quiet)
 {
-	// Setting some variables needed for select()
+	/* Setting some variables needed for select() */
 	char receivedPacketBuffer[512];
 	fd_set readfds;
-    //FD_ZERO(&readfds);
 	FD_SET(socketDescriptor, &readfds);
 	struct timeval timeout;
 	timeout.tv_sec = 2; // timeout period, seconds (added second, if that matters)
@@ -229,7 +221,10 @@ void listen(int socketDescriptor, sockaddr_in * fromWhom)
 			ssize_t bytesReceived = recvfrom(socketDescriptor, (char *)receivedPacketBuffer, sizeof(receivedPacketBuffer), 0, (struct sockaddr *)&fromWhom, &fromWhomLength);
             //printf("OH DEAR! AN ERROR! : %s\n", strerror(errno));
             // TODO remove the +14... it's cheating!
-			printf("%zd bytes received\n", bytesReceived+14);
+            if(!quiet)
+            {
+                printf("%zd bytes received\n", bytesReceived+14);
+            }
             
             /* Format the received data into the IP struct, then shift bits */
             struct ip * receivedIPHeader = (struct ip *) receivedPacketBuffer;
@@ -252,6 +247,10 @@ void listen(int socketDescriptor, sockaddr_in * fromWhom)
                     printf("Not our packet\n");
                     printf("processID = %d \t ID = %d\n", processID, receivedICMPHeader->icmp_id);
                 }
+//                csvOutput << "Type,";// << icmpHeader->icmp_type;
+//                csvOutput << "Code,";// <<icmpHeader->icmp_code;
+//                csvOutput << "Seq,";// <<icmpHeader->icmp_seq;
+//                csvOutput << "Checksum,";// <<icmpHeader->icmp_cksum;
                // printf("%d microseconds\t", now.tv_usec - timeReceived.tv_usec);
             }
             else
@@ -668,13 +667,12 @@ int main(int argc, const char** argv)
     
     /* Counting variable */
     int i = 0;
-    
+    csvOutput.open("output2.csv");
     /*
      
      Execute the ping/listen functions in parallel with OpenMP threading
      
     */
-    
     #pragma omp parallel sections
     {
         /* Ping block */
@@ -682,17 +680,30 @@ int main(int argc, const char** argv)
         for (i = 0; i < pingsToSend; i++)
         {
             ping(socketDescriptor, icmpPayloadLength);
+            // TODO this is kinda sloppy. maybe we can do a better job of excluding pings.
+            pingsToExclude--;
             usleep(msecsBetweenReq*1000);
+           
         }
         /* Listen block */
         #pragma omp section
         while(1) // TODO make this timeout...
         {
+            /* Check if we're done listening */
             if(i >= pingsToSend-1)
             {
                 break;
             }
-            listen(socketDescriptor, &sourceSocket);
+            
+            /* If we're excluding some pings, listen but don't print any info */
+            if(excludingPing && pingsToExclude > 0)
+            {
+                listen(socketDescriptor, &sourceSocket, 1);
+            }
+            else
+            {
+                listen(socketDescriptor, &sourceSocket, 0);
+            }
         }
         
     }
