@@ -2,13 +2,23 @@
  
  ePing
  
- Using the Internet Control Message Protocol (ICMP) "ECHO" facility,
- measure round-trip-delays and packet loss across network paths.
+ Using the Internet Control Message Protocol (ICMP) ECHO_REQUEST
+ and ECHO_REPLY messages to measure round-trip-delays and packet
+ loss across network paths.
+ 
+ Created as a 2013 NDSU Capstone Project with specifications
+ and requiremetns provided by Ericsson.
+ 
+ An extension/reimplementation of the original ping.c.
+ Inspiration and design inspired by:
+ Author -
+ Mike Muuss
+ U. S. Army Ballistic Research Laboratory
+ December, 1983
+ Modified at Uc Berkeley
  
  */
 
-//TODO remove this when debugging is done
-#include <iostream>
 
 
 /*
@@ -21,7 +31,6 @@
 #include <sys/file.h>
 #include <sys/time.h>
 #include <sys/select.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
 #include <netdb.h>
@@ -50,7 +59,7 @@
  
  Initialize Structs
  
-*/
+ */
 
 struct sockaddr_in *socketAddress;
 struct sockaddr whereto;
@@ -67,10 +76,9 @@ u_char * packetIP[100];
  
  Global Variables
  
-*/
+ */
 int sent;
 int processID;
-int socketDescriptor;
 int icmpPayloadLength = 20;
 int pingsToSend = 5;
 int pingsSent = 0;
@@ -127,6 +135,7 @@ static u_short checksum(u_short *ICMPHeader, int len)
  */
 void ping(int socketDescriptor, int icmpPayloadLength)
 {
+    printf("PING\n");
 	// Fill in some data to send
 	// Save tick count when sent (milliseconds)
 	// Compute checksum
@@ -138,14 +147,14 @@ void ping(int socketDescriptor, int icmpPayloadLength)
 	if(sent > 0)
 	{
 		printf("SENT ");
-        printf("Seq : %d\t", icmpHeader->icmp_seq);
+        printf("Seq : %d\n\n", icmpHeader->icmp_seq);
         // Increment packet sequence number
         icmpHeader->icmp_seq++;
         pingsSent++;
 	}
 	else
 	{
-		printf("Ping not sent.\n");
+		printf("Ping not sent.\n\n");
 	}
 }
 
@@ -153,7 +162,7 @@ void ping(int socketDescriptor, int icmpPayloadLength)
  
  report()
  
- This function grabs relevent data from the ICMP ECHO_REPLY and
+ This function grabs relevent data from the ICMP ECHO_REPL packet Y and
  prints out the statistics of the pings ran with the program.
  It is called by listen().
  
@@ -162,8 +171,10 @@ void report(char* receivedPacketBuffer)
 {
     struct ip * receivedIPHeader = (struct ip *) receivedPacketBuffer;
 	int headerLength = receivedIPHeader->ip_hl << 2;
+    
     /* Format the received data into the ICMP struct */
     receivedICMPHeader = (struct icmp *)(receivedPacketBuffer + headerLength);
+    
     /* Check if the packet was meant for our computer using the ICMP id,
      which we set to the process ID */
     if (receivedICMPHeader->icmp_type == 0)
@@ -191,23 +202,23 @@ void report(char* receivedPacketBuffer)
  This function receives ECHO_REPLY packets sent to the host computer,
  and passes the information off to report()
  
-*/
+ */
 void listen(int socketDescriptor, sockaddr_in * fromWhom)
 {
 	// Setting some variables needed for select()
 	char receivedPacketBuffer[512];
 	fd_set readfds;
-    FD_ZERO(&readfds);
+    //FD_ZERO(&readfds);
 	FD_SET(socketDescriptor, &readfds);
 	struct timeval timeout;
 	timeout.tv_sec = 2; // timeout period, seconds (added second, if that matters)
 	timeout.tv_usec = 0; // timeuot period, microseconds 1,000,000 micro = second
 	int selectStatus = select(socketDescriptor+1, &readfds, NULL, NULL, &timeout);
-
+    
     socklen_t fromWhomLength = sizeof(fromWhom);
 	if(selectStatus == -1)
 	{
-		printf("Something terrible has happened! Error in select()\n");
+		printf("LISTEN: Error in select()\n");
 	}
 	else if(selectStatus == 0)
 	{
@@ -218,10 +229,10 @@ void listen(int socketDescriptor, sockaddr_in * fromWhom)
 		if(FD_ISSET(socketDescriptor, &readfds))
 		{
             /*recvfrom(int sockfd, void *buf, size_t len, int flags,
-                     struct sockaddr *src_addr, socklen_t *addrlen);*/
+             struct sockaddr *src_addr, socklen_t *addrlen);*/
 			ssize_t bytesReceived = recvfrom(socketDescriptor, (char *)receivedPacketBuffer, sizeof(receivedPacketBuffer), 0, (struct sockaddr *)&fromWhom, &fromWhomLength);
             //printf("OH DEAR! AN ERROR! : %s\n", strerror(errno));
-			printf("RECEIVED: %zd bytes\n", bytesReceived);
+			printf("LISTEN: %zd bytes received\n", bytesReceived);
             report(receivedPacketBuffer);
 		}
 	}
@@ -236,7 +247,7 @@ void listen(int socketDescriptor, sockaddr_in * fromWhom)
  contain essential packet information. The IP address information is
  set in main().
  
-*/
+ */
 void buildPing()
 {
 	icmpHeader = (struct icmp *) packet;
@@ -622,20 +633,36 @@ int main(int argc, const char** argv)
     /* We use the process ID from this program as our ICMP id */
 	processID = getpid() & 0xFFFF;
     /* Socket descriptors for sending and receiving traffic */
-	socketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
+	int socketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
     printf("----------------------------------\n");
+    /* Initialize some ICMP and IP header values */
     buildPing();
+    int i = 0;
     /*
      
-     Execute the ping/listen functions. The first
-     statement is for ignoring pings.
+     Execute the ping/listen functions.
      
      */
-    
-    for (int i = 0; i < pingsToSend; i++)
+    icmpPayloadLength = 30;
+    #pragma omp parallel sections
     {
-        ping(socketDescriptor, icmpPayloadLength);
-        listen(socketDescriptor, &sourceSocket);
+        #pragma omp section
+        for (i = 0; i < pingsToSend; i++)
+        {
+            ping(socketDescriptor, icmpPayloadLength);
+            usleep(1000000);
+        }
+        #pragma omp section
+        for(; ;)
+        {
+            if(i == pingsToSend-1)
+            {
+                break;
+            }
+            printf("i = %d", i);
+            listen(socketDescriptor, &sourceSocket);
+        }
     }
+    
 	printf("----------------------------------\n");
 }
