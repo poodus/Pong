@@ -186,6 +186,7 @@
 		991C8516171246090074CAC1 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				"GCC_ENABLE_CPP_RTTI[arch=*]" = YES;
 				GCC_VERSION = com.apple.compilers.llvmgcc42;
 				"GCC_VERSION[arch=*]" = "";
 				OTHER_CPLUSPLUSFLAGS = (

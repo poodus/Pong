@@ -79,7 +79,7 @@ u_char * packetIP[100];
  */
 int sent;
 int processID;
-int icmpPayloadLength = 20;
+int icmpPayloadLength = 30;
 int pingsToSend = 5;
 int pingsSent = 0;
 
@@ -135,7 +135,6 @@ static u_short checksum(u_short *ICMPHeader, int len)
  */
 void ping(int socketDescriptor, int icmpPayloadLength)
 {
-    printf("PING\n");
 	// Fill in some data to send
 	// Save tick count when sent (milliseconds)
 	// Compute checksum
@@ -146,8 +145,11 @@ void ping(int socketDescriptor, int icmpPayloadLength)
 	// Print out if the packet sent or not
 	if(sent > 0)
 	{
-		printf("SENT ");
-        printf("Seq : %d\n\n", icmpHeader->icmp_seq);
+		printf("SENT\n");
+//        printf("Type: %d\t", icmpHeader->icmp_type);
+//        printf("Code: %d\t", icmpHeader->icmp_code);
+//        printf("Seq : %d\t", icmpHeader->icmp_seq);
+//        printf("Checksum: %d \t\n", icmpHeader->icmp_cksum);
         // Increment packet sequence number
         icmpHeader->icmp_seq++;
         pingsSent++;
@@ -162,37 +164,13 @@ void ping(int socketDescriptor, int icmpPayloadLength)
  
  report()
  
- This function grabs relevent data from the ICMP ECHO_REPL packet Y and
- prints out the statistics of the pings ran with the program.
- It is called by listen().
+ This function reports the final statistics, either to the command line
+ or to a CSV (comma separated value) file.
  
- */
-void report(char* receivedPacketBuffer)
+*/
+void report()
 {
-    struct ip * receivedIPHeader = (struct ip *) receivedPacketBuffer;
-	int headerLength = receivedIPHeader->ip_hl << 2;
-    
-    /* Format the received data into the ICMP struct */
-    receivedICMPHeader = (struct icmp *)(receivedPacketBuffer + headerLength);
-    
-    /* Check if the packet was meant for our computer using the ICMP id,
-     which we set to the process ID */
-    if (receivedICMPHeader->icmp_type == 0)
-    {
-        if(receivedICMPHeader->icmp_id != processID)
-        {
-            printf("Not our packet\n");
-            printf("processID = %d \t ID = %d\n", processID, receivedICMPHeader->icmp_id);
-        }
-    }
-    else
-    {
-        printf("Not a reply\n");
-    }
-    printf("Type: %d\n", receivedICMPHeader->icmp_type);
-    printf("Seq : %d \n", receivedICMPHeader->icmp_seq);
-    printf("Checksum: %d \n", receivedICMPHeader->icmp_cksum);
-    printf("Code: %d\n\n", receivedICMPHeader->icmp_code);
+    printf("Statistics: ");
 }
 
 /*
@@ -202,7 +180,7 @@ void report(char* receivedPacketBuffer)
  This function receives ECHO_REPLY packets sent to the host computer,
  and passes the information off to report()
  
- */
+*/
 void listen(int socketDescriptor, sockaddr_in * fromWhom)
 {
 	// Setting some variables needed for select()
@@ -213,6 +191,7 @@ void listen(int socketDescriptor, sockaddr_in * fromWhom)
 	struct timeval timeout;
 	timeout.tv_sec = 2; // timeout period, seconds (added second, if that matters)
 	timeout.tv_usec = 0; // timeuot period, microseconds 1,000,000 micro = second
+    // TODO Make this timeout dependent on how many pings have been sent...
 	int selectStatus = select(socketDescriptor+1, &readfds, NULL, NULL, &timeout);
     
     socklen_t fromWhomLength = sizeof(fromWhom);
@@ -228,12 +207,33 @@ void listen(int socketDescriptor, sockaddr_in * fromWhom)
 	{
 		if(FD_ISSET(socketDescriptor, &readfds))
 		{
-            /*recvfrom(int sockfd, void *buf, size_t len, int flags,
-             struct sockaddr *src_addr, socklen_t *addrlen);*/
+            /* Receive the data */
 			ssize_t bytesReceived = recvfrom(socketDescriptor, (char *)receivedPacketBuffer, sizeof(receivedPacketBuffer), 0, (struct sockaddr *)&fromWhom, &fromWhomLength);
             //printf("OH DEAR! AN ERROR! : %s\n", strerror(errno));
-			printf("LISTEN: %zd bytes received\n", bytesReceived);
-            report(receivedPacketBuffer);
+			printf("%zd bytes received\n", bytesReceived);
+            
+            /* Format the received data into the IP struct, then shift bits */
+            struct ip * receivedIPHeader = (struct ip *) receivedPacketBuffer;
+            int headerLength = receivedIPHeader->ip_hl << 2;
+            
+            /* Format the received data into the ICMP struct */
+            receivedICMPHeader = (struct icmp *)(receivedPacketBuffer + headerLength);
+            
+            /* Check if the packet was an ECHO_REPLY, and if it was meant for our computer using the ICMP id,
+             which we set to the process ID */
+            if (receivedICMPHeader->icmp_type == 0)
+            {
+                if(receivedICMPHeader->icmp_id != processID)
+                {
+                    printf("Not our packet\n");
+                    printf("processID = %d \t ID = %d\n", processID, receivedICMPHeader->icmp_id);
+                }
+            }
+            else
+            {
+                printf("Not a reply\n");
+            }
+
 		}
 	}
 }
@@ -583,7 +583,7 @@ int main(int argc, const char** argv)
      UNIX block for setting the source and destination IP address
      
      */
-#if __unix__
+    #if __unix__
 	socketAddress = (struct sockaddr_in *)&whereto;
 	if(inet_pton(AF_INET,destination,&(socketAddress->sin_addr))!=1)
 	{
@@ -595,7 +595,7 @@ int main(int argc, const char** argv)
      APPLE block for setting the source and destination IP address
      
      */
-#elif __APPLE__
+    #elif __APPLE__
 	socketAddress = (struct sockaddr_in *)&whereto;
 	if(inet_pton(AF_INET,destination,&(socketAddress->sin_addr))!=1)
 	{
@@ -607,7 +607,7 @@ int main(int argc, const char** argv)
      WINDOWS block for setting the source and destination IP address
      
      */
-#elif __WINDOWS__
+    #elif __WINDOWS__
 	if(InetPton(AF_INET,destination,&IPHeader.destinationIPAddress)!=1)
 	{
 		int error=WSAGetLastError();
@@ -620,30 +620,35 @@ int main(int argc, const char** argv)
         exit(0);
 	}
 	InetPton(AF_INET,hostIP,&IPHeader.sourceIPAddress);
-#endif
+    #endif
+    
     /*
      
      Set up the sockets
      
      */
-	
 	sockaddr_in sourceSocket;
 	sourceSocket.sin_addr = srcIP;
 	sourceSocket.sin_family = AF_INET;
+    
     /* We use the process ID from this program as our ICMP id */
 	processID = getpid() & 0xFFFF;
-    /* Socket descriptors for sending and receiving traffic */
+    
+    /* Create socket descriptor for sending and receiving traffic */
 	int socketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
     printf("----------------------------------\n");
+    
     /* Initialize some ICMP and IP header values */
     buildPing();
+    
+    /* Counting variable */
     int i = 0;
+    
     /*
      
-     Execute the ping/listen functions.
+     Execute the ping/listen functions with multi-threading
      
-     */
-    icmpPayloadLength = 30;
+    */
     #pragma omp parallel sections
     {
         #pragma omp section
@@ -652,18 +657,19 @@ int main(int argc, const char** argv)
             ping(socketDescriptor, icmpPayloadLength);
             usleep(msecsBetweenReq*1000);
         }
+        
         #pragma omp section
-        for(; ;)
+        while(1) // TODO make this timeout...
         {
             if(i >= pingsToSend-1)
             {
                 break;
             }
-            printf("i = %d", i);
             listen(socketDescriptor, &sourceSocket);
-            // Do something to make sure this look doesn't loop for ever
         }
+        
     }
     
-	printf("----------------------------------\n");
+    /* Print final statistics and quit */
+    report();
 }
