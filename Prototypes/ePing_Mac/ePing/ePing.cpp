@@ -282,7 +282,7 @@ int main(int argc, const char** argv)
      */
 	const char* destination = argv[1];
 	bool timeBetweenReq = 0; // -q
-    int msecsBetweenReq = 0;
+    int msecsBetweenReq = 1000;
 	bool timeBetweenRepReq = 0; // -b
     int msecsBetweenRepReq = 0;
 	bool datagramSize = 0; // -d
@@ -650,17 +650,18 @@ int main(int argc, const char** argv)
         for (i = 0; i < pingsToSend; i++)
         {
             ping(socketDescriptor, icmpPayloadLength);
-            usleep(1000000);
+            usleep(msecsBetweenReq*1000);
         }
         #pragma omp section
         for(; ;)
         {
-            if(i == pingsToSend-1)
+            if(i >= pingsToSend-1)
             {
                 break;
             }
             printf("i = %d", i);
             listen(socketDescriptor, &sourceSocket);
+            // Do something to make sure this look doesn't loop for ever
         }
     }
     
