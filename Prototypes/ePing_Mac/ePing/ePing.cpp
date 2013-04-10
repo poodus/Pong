@@ -218,7 +218,7 @@ void listen(int socketDescriptor, sockaddr_in * fromWhom, bool quiet)
 		if(FD_ISSET(socketDescriptor, &readfds))
 		{
             /* Receive the data */
-			ssize_t bytesReceived = recvfrom(socketDescriptor, (char *)receivedPacketBuffer, sizeof(receivedPacketBuffer), 0, (struct sockaddr *)&fromWhom, &fromWhomLength);
+			ssize_t bytesReceived = recvfrom(socketDescriptor, receivedPacketBuffer, sizeof(receivedPacketBuffer), 0, (struct sockaddr *)&fromWhom, &fromWhomLength);
             //printf("OH DEAR! AN ERROR! : %s\n", strerror(errno));
             // TODO remove the +14... it's cheating!
             if(!quiet)
@@ -236,7 +236,6 @@ void listen(int socketDescriptor, sockaddr_in * fromWhom, bool quiet)
             /* Get the time */
             //timeReceived = *(struct timeval *)(receivedICMPHeader->icmp_data);
             //gettimeofday(&now, NULL);
-            
             
             /* Check if the packet was an ECHO_REPLY, and if it was meant for our computer using the ICMP id,
              which we set to the process ID */
