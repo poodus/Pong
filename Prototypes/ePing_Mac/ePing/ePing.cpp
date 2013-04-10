@@ -25,7 +25,9 @@
  
  Imports
  
- */
+*/
+#include <iostream>
+#include <fstream>
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/file.h>
@@ -40,6 +42,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
+
 
 #include <stdlib.h>
 #include <string.h>
@@ -82,6 +85,18 @@ int processID;
 int icmpPayloadLength = 30;
 int pingsToSend = 5;
 int pingsSent = 0;
+
+
+struct timeval now, timeout, timeReceived;
+
+/*
+    
+ Variables for CSV file
+ 
+*/
+using namespace std;
+ofstream csvOutput;
+
 
 /*
  
@@ -140,6 +155,9 @@ void ping(int socketDescriptor, int icmpPayloadLength)
 	// Compute checksum
 	icmpHeader->icmp_cksum = 0;
 	icmpHeader->icmp_cksum = checksum((u_short *)icmpHeader, sizeof(*icmpHeader));
+    // Get time
+    
+    //gettimeofday((struct timeval *)icmpHeader->icmp_data, NULL);
 	// Send the packet
 	sent = sendto(socketDescriptor, packet, icmpPayloadLength+8, 0, (struct sockaddr *)&whereto, sizeof(&whereto));
 	// Print out if the packet sent or not
@@ -170,7 +188,7 @@ void ping(int socketDescriptor, int icmpPayloadLength)
 */
 void report()
 {
-    printf("Statistics: ");
+    printf("Statistics: \n");
 }
 
 /*
@@ -210,7 +228,8 @@ void listen(int socketDescriptor, sockaddr_in * fromWhom)
             /* Receive the data */
 			ssize_t bytesReceived = recvfrom(socketDescriptor, (char *)receivedPacketBuffer, sizeof(receivedPacketBuffer), 0, (struct sockaddr *)&fromWhom, &fromWhomLength);
             //printf("OH DEAR! AN ERROR! : %s\n", strerror(errno));
-			printf("%zd bytes received\n", bytesReceived);
+            // TODO remove the +14... it's cheating!
+			printf("%zd bytes received\n", bytesReceived+14);
             
             /* Format the received data into the IP struct, then shift bits */
             struct ip * receivedIPHeader = (struct ip *) receivedPacketBuffer;
@@ -218,6 +237,11 @@ void listen(int socketDescriptor, sockaddr_in * fromWhom)
             
             /* Format the received data into the ICMP struct */
             receivedICMPHeader = (struct icmp *)(receivedPacketBuffer + headerLength);
+            
+            /* Get the time */
+            //timeReceived = *(struct timeval *)(receivedICMPHeader->icmp_data);
+            //gettimeofday(&now, NULL);
+            
             
             /* Check if the packet was an ECHO_REPLY, and if it was meant for our computer using the ICMP id,
              which we set to the process ID */
@@ -228,6 +252,7 @@ void listen(int socketDescriptor, sockaddr_in * fromWhom)
                     printf("Not our packet\n");
                     printf("processID = %d \t ID = %d\n", processID, receivedICMPHeader->icmp_id);
                 }
+               // printf("%d microseconds\t", now.tv_usec - timeReceived.tv_usec);
             }
             else
             {
@@ -646,18 +671,20 @@ int main(int argc, const char** argv)
     
     /*
      
-     Execute the ping/listen functions with multi-threading
+     Execute the ping/listen functions in parallel with OpenMP threading
      
     */
+    
     #pragma omp parallel sections
     {
+        /* Ping block */
         #pragma omp section
         for (i = 0; i < pingsToSend; i++)
         {
             ping(socketDescriptor, icmpPayloadLength);
             usleep(msecsBetweenReq*1000);
         }
-        
+        /* Listen block */
         #pragma omp section
         while(1) // TODO make this timeout...
         {
@@ -670,6 +697,12 @@ int main(int argc, const char** argv)
         
     }
     
+    csvOutput << "Writing this to a file,";
+    csvOutput << "Writing that to a file,";
+    csvOutput.close();
+    
+
     /* Print final statistics and quit */
     report();
+    return(0);
 }
