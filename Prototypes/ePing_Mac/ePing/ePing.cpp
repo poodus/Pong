@@ -26,6 +26,7 @@
  Imports
  
 */
+#include <omp.h>
 #include <iostream>
 #include <fstream>
 #include <sys/param.h>
@@ -668,7 +669,8 @@ int main(int argc, const char** argv)
     /* Counting variable */
     int i = 0;
     csvOutput.open("output2.csv");
-    /*
+    omp_set_num_threads(2);
+	/*
      
      Execute the ping/listen functions in parallel with OpenMP threading
      
@@ -687,9 +689,9 @@ int main(int argc, const char** argv)
         }
         /* Listen block */
         #pragma omp section
-        while(1) // TODO make this timeout...
+        for(; ;) // TODO make this timeout...
         {
-            /* Check if we're done listening */
+		/* Check if we're done listening */
             if(i >= pingsToSend-1)
             {
                 break;
@@ -698,10 +700,12 @@ int main(int argc, const char** argv)
             /* If we're excluding some pings, listen but don't print any info */
             if(excludingPing && pingsToExclude > 0)
             {
-                listen(socketDescriptor, &sourceSocket, 1);
+                printf("Listen\n");
+		listen(socketDescriptor, &sourceSocket, 1);
             }
             else
             {
+		printf("Listen\n");
                 listen(socketDescriptor, &sourceSocket, 0);
             }
         }
