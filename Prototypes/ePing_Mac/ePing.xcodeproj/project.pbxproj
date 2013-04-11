@@ -26,7 +26,7 @@
 
 /* Begin PBXFileReference section */
 		991C850C171246090074CAC1 /* ePing */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ePing; sourceTree = BUILT_PRODUCTS_DIR; };
-		991C850F171246090074CAC1 /* ePing.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ePing.cpp; sourceTree = "<group>"; };
+		991C850F171246090074CAC1 /* ePing.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; path = ePing.cpp; sourceTree = "<group>"; };
 		991C8511171246090074CAC1 /* ePing.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = ePing.1; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -138,6 +138,8 @@
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				ENABLE_OPENMP_SUPPORT = YES;
+				"ENABLE_OPENMP_SUPPORT[arch=*]" = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
@@ -147,12 +149,15 @@
 					"$(inherited)",
 				);
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_VERSION = com.apple.compilers.llvmgcc42;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.8;
 				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CPLUSPLUSFLAGS = "-fopenmp";
+				"OTHER_CPLUSPLUSFLAGS[arch=*]" = "-fopenmp";
 				SDKROOT = macosx;
 			};
 			name = Debug;
@@ -172,13 +177,16 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_OPENMP_SUPPORT = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_VERSION = com.apple.compilers.llvmgcc42;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				OTHER_CPLUSPLUSFLAGS = "-fopenmp";
 				SDKROOT = macosx;
 			};
 			name = Release;
@@ -186,17 +194,14 @@
 		991C8516171246090074CAC1 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ENABLE_OPENMP_SUPPORT = YES;
+				"ENABLE_OPENMP_SUPPORT[arch=*]" = YES;
 				"GCC_ENABLE_CPP_RTTI[arch=*]" = YES;
 				GCC_VERSION = com.apple.compilers.llvmgcc42;
-				"GCC_VERSION[arch=*]" = "";
-				OTHER_CPLUSPLUSFLAGS = (
-					"$(OTHER_CFLAGS)",
-					"-fopenmp",
-				);
-				"OTHER_CPLUSPLUSFLAGS[arch=*]" = (
-					"$(OTHER_CFLAGS)",
-					"-fopenmp",
-				);
+				"GCC_VERSION[arch=*]" = com.apple.compilers.llvmgcc42;
+				New_Setting = "";
+				OTHER_CPLUSPLUSFLAGS = "-fopenmp";
+				"OTHER_CPLUSPLUSFLAGS[arch=*]" = "-fopenmp";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -204,11 +209,10 @@
 		991C8517171246090074CAC1 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ENABLE_OPENMP_SUPPORT = YES;
 				GCC_VERSION = com.apple.compilers.llvmgcc42;
-				OTHER_CPLUSPLUSFLAGS = (
-					"$(OTHER_CFLAGS)",
-					"-fopenmp",
-				);
+				New_Setting = "";
+				OTHER_CPLUSPLUSFLAGS = "-fopenmp";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;

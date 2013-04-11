@@ -43,13 +43,12 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
-
-
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <errno.h>
+
 #if __unix__
 #include <arpa/inet.h>
 #include <time.h>
@@ -699,12 +698,10 @@ int main(int argc, const char** argv)
             /* If we're excluding some pings, listen but don't print any info */
             if(excludingPing && pingsToExclude > 0)
             {
-                printf("Listen\n");
-		listen(socketDescriptor, &sourceSocket, 1);
+                listen(socketDescriptor, &sourceSocket, 1);
             }
             else
             {
-		printf("Listen\n");
                 listen(socketDescriptor, &sourceSocket, 0);
             }
         }
@@ -714,7 +711,6 @@ int main(int argc, const char** argv)
     csvOutput << "Writing this to a file,";
     csvOutput << "Writing that to a file,";
     csvOutput.close();
-    
 
     /* Print final statistics and quit */
     report();
