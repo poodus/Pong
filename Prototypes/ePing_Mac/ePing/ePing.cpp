@@ -48,10 +48,10 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <errno.h>
+#include <sys/time.h>
 
 #if __unix__
 #include <arpa/inet.h>
-#include <time.h>
 
 #elif __WINDOWS__
 #include <windows.h>
@@ -87,7 +87,9 @@ int pingsToSend = 5;
 int pingsSent = 0;
 
 
-struct timeval now, timeout, timeReceived;
+struct timeval now;
+struct timeval timeout;
+struct timeval timeReceived;
 
 /*
     
@@ -141,14 +143,14 @@ static u_short checksum(u_short *ICMPHeader, int len)
 
 /*
  
- ping()
+ pingICMP()
  
  This method actually sends our ECHO_REQUEST across the internet.
  It computes the ICMP checksum and sends the packet to the address
  specified in main().
  
  */
-void ping(int socketDescriptor, int icmpPayloadLength)
+void pingICMP(int socketDescriptor, int icmpPayloadLength)
 {
 	// Fill in some data to send
 	// Save tick count when sent (milliseconds)
@@ -156,7 +158,8 @@ void ping(int socketDescriptor, int icmpPayloadLength)
 	icmpHeader->icmp_cksum = 0;
 	icmpHeader->icmp_cksum = checksum((u_short *)icmpHeader, sizeof(*icmpHeader));
     // Get time
-    //gettimeofday((struct timeval *)icmpHeader->icmp_data, NULL);
+    gettimeofday((struct timeval *)&packet[8], NULL);
+    //gettimeofday((struct timeval *)icmpHeader->icmp_dun, NULL);
 	// Send the packet
 	sent = sendto(socketDescriptor, packet, icmpPayloadLength+8, 0, &whereto, sizeof(struct sockaddr));
 	// Print out if the packet sent or not
@@ -186,13 +189,13 @@ void report()
 
 /*
  
- listen()
+ listenICMP()
  
  This function receives ECHO_REPLY packets sent to the host computer
  and does some basic processing.
  
 */
-void listen(int socketDescriptor, sockaddr_in * fromWhom, bool quiet)
+void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet)
 {
 	/* Setting some variables needed for select() */
 	char receivedPacketBuffer[512];
@@ -234,8 +237,10 @@ void listen(int socketDescriptor, sockaddr_in * fromWhom, bool quiet)
             receivedICMPHeader = (struct icmp *)(receivedPacketBuffer + headerLength);
             
             /* Get the time */
-            //timeReceived = *(struct timeval *)(receivedICMPHeader->icmp_data);
+            //timeReceived = (struct timeval *)receivedPacketBuffer[8];
             //gettimeofday(&now, NULL);
+           
+            //printf("TIME: %d %d\n\n", timeReceived.tv_sec, now.tv_sec);
             
             /* Check if the packet was an ECHO_REPLY, and if it was meant for our computer using the ICMP id,
              which we set to the process ID */
@@ -331,7 +336,11 @@ int main(int argc, const char** argv)
     int pingsToExclude = 0;
 	bool multiplePings = 0; // -n
     pingsToSend = 5; // DEFAULT VALUE of 5
-	
+	if(argc-1 == 0)
+    {
+       printf("Usage: ePing (IP Address) -n (number of pings) -e (num of pings to exclude from summary)\n");
+        return(0);
+    }
 	for(int i = 2; i < argc; i++) {
         // argv[0] is the ./a which is input
         // argv[1] is the IPv4 address, MUST be valid
@@ -657,8 +666,20 @@ int main(int argc, const char** argv)
     /* We use the process ID from this program as our ICMP id */
 	processID = getpid() & 0xFFFF;
     
+    /* Check if we're root. If not, we can't create the raw socket necessary for ICMP */
+    if(getuid()!=0 && geteuid()!=0)
+    {
+        printf("UID: %d EUID: %d", getuid(), geteuid());
+        printf("\nCan't run. I need root permissions to create raw socket. Sorry.\n");
+        return(0);
+    }
+    printf("UID: %d", getuid());
     /* Create socket descriptor for sending and receiving traffic */
 	int socketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
+    
+    /* Drop root permissions */
+    setuid(getuid());
+    printf("UID: %d", getuid());
     printf("----------------------------------\n");
     
     /* Initialize some ICMP and IP header values */
@@ -679,7 +700,7 @@ int main(int argc, const char** argv)
         #pragma omp section
         for (i = 0; i < pingsToSend; i++)
         {
-            ping(socketDescriptor, icmpPayloadLength);
+            pingICMP(socketDescriptor, icmpPayloadLength);
             // TODO this is kinda sloppy. maybe we can do a better job of excluding pings.
             pingsToExclude--;
             usleep(msecsBetweenReq*1000);
@@ -698,11 +719,11 @@ int main(int argc, const char** argv)
             /* If we're excluding some pings, listen but don't print any info */
             if(excludingPing && pingsToExclude > 0)
             {
-                listen(socketDescriptor, &sourceSocket, 1);
+                listenICMP(socketDescriptor, &sourceSocket, 1);
             }
             else
             {
-                listen(socketDescriptor, &sourceSocket, 0);
+                listenICMP(socketDescriptor, &sourceSocket, 0);
             }
         }
         
