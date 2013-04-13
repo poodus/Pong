@@ -3,3 +3,4 @@
 *.stackdump
 *.c~
 *.orig
+*.metadata
