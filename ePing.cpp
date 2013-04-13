@@ -4,14 +4,16 @@
  
  Using the Internet Control Message Protocol (ICMP) ECHO_REQUEST
  and ECHO_REPLY messages to measure round-trip-delays and packet
- loss across network paths.
+ loss across network paths. Eventually, we'd like to expand
+ this to UDP pinging as well.
  
  Created as a 2013 NDSU Capstone Project with specifications
  and requiremetns provided by Ericsson.
  
  An extension/reimplementation of the original ping.c.
+ Emphasis is on readability and ease of understanding the code.
  Inspiration and design inspired by:
- Author -
+ 
  Mike Muuss
  U. S. Army Ballistic Research Laboratory
  December, 1983
@@ -86,11 +88,6 @@ int icmpPayloadLength = 30;
 int pingsToSend = 5;
 int pingsSent = 0;
 
-
-struct timeval now;
-struct timeval timeout;
-struct timeval timeReceived;
-
 /*
     
  Variables for CSV file
@@ -98,6 +95,9 @@ struct timeval timeReceived;
 */
 using namespace std;
 ofstream csvOutput;
+
+static timespec sentTime, receivedTime;
+double roundTripTime;
 
 
 /*
@@ -107,7 +107,7 @@ ofstream csvOutput;
  Simple checksum function for ICMP Header. This implentation was
  adapted from Mike Musss' version of ping.c
  
- */
+*/
 static u_short checksum(u_short *ICMPHeader, int len)
 {
     register int nleft = len;
@@ -116,9 +116,9 @@ static u_short checksum(u_short *ICMPHeader, int len)
     u_short answer = 0;
     
     /*
-     Our algorithm is simple, using a 32 bit accumulator (sum), we add
-     sequential 16 bit words to it, and at the end, fold back all the
-     carry bits from the top 16 bits into the lower 16 bits.
+       Our algorithm is simple, using a 32 bit accumulator (sum), we add
+       sequential 16 bit words to it, and at the end, fold back all the
+       carry bits from the top 16 bits into the lower 16 bits.
      */
     while (nleft > 1)
     {
@@ -127,17 +127,17 @@ static u_short checksum(u_short *ICMPHeader, int len)
         nleft -= 2;
     }
     
-    /* mop up an odd byte, if necessary */
+    /* Mop up an odd byte, if necessary */
     if (nleft == 1)
     {
         *(u_char *)(&answer) = *(u_char *) ICMPPointer;
         sum += answer;
     }
     
-    /* add back carry outs from top 16 bits to low 16 bits */
+    /* Add back carry outs from top 16 bits to low 16 bits */
     sum = (sum >> 16) + (sum & 0xffff);     /* add hi 16 to low 16 */
     sum += (sum >> 16);                     /* add carry */
-    answer = (u_short)~sum;                          /* truncate to 16 bits */
+    answer = (u_short)~sum;                 /* truncate to 16 bits */
     return(answer);
 }
 
@@ -149,24 +149,27 @@ static u_short checksum(u_short *ICMPHeader, int len)
  It computes the ICMP checksum and sends the packet to the address
  specified in main().
  
- */
+*/
 void pingICMP(int socketDescriptor, int icmpPayloadLength)
 {
-	// Fill in some data to send
-	// Save tick count when sent (milliseconds)
-	// Compute checksum
+	/* Compute checksum */
 	icmpHeader->icmp_cksum = 0;
 	icmpHeader->icmp_cksum = checksum((u_short *)icmpHeader, sizeof(*icmpHeader));
-    // Get time
-    gettimeofday((struct timeval *)&packet[8], NULL);
-    //gettimeofday((struct timeval *)icmpHeader->icmp_dun, NULL);
-	// Send the packet
+    
+    /* Get time, put it in the packet */
+    
+	/* Try to send the packet */
 	sent = sendto(socketDescriptor, packet, icmpPayloadLength+8, 0, &whereto, sizeof(struct sockaddr));
-	// Print out if the packet sent or not
+    
+    /* Set time sent */
+    clock_gettime(CLOCK_MONOTONIC, &sentTime);
+    
+    /* Check if the packet sent or not */
 	if(sent > 0)
 	{
 		printf("SENT\n");
         pingsSent++;
+        icmpHeader->icmp_seq++;
 	}
 	else
 	{
@@ -197,7 +200,7 @@ void report()
 */
 void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet)
 {
-	/* Setting some variables needed for select() */
+	/* Setting some variables needed for select() and our file descriptor */
 	char receivedPacketBuffer[512];
 	fd_set readfds;
 	FD_SET(socketDescriptor, &readfds);
@@ -206,7 +209,6 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet)
 	timeout.tv_usec = 0; // timeuot period, microseconds 1,000,000 micro = second
     // TODO Make this timeout dependent on how many pings have been sent...
 	int selectStatus = select(socketDescriptor+1, &readfds, NULL, NULL, &timeout);
-    
     socklen_t fromWhomLength = sizeof(fromWhom);
 	if(selectStatus == -1)
 	{
@@ -220,14 +222,14 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet)
 	{
 		if(FD_ISSET(socketDescriptor, &readfds))
 		{
+            /* Get the time */
+            printf("CLOCKS PER SEC: %d\n", CLOCKS_PER_SEC);            clock_gettime(CLOCK_MONOTONIC, &receivedTime);
+            roundTripTime = (receivedTime.tv_sec - sentTime.tv_sec);
+            roundTripTime += (receivedTime.tv_nsec - sentTime.tv_nsec) / 1000000000.0;
+            printf("Elapsed time: %f ms \n", roundTripTime);
+            
             /* Receive the data */
 			ssize_t bytesReceived = recvfrom(socketDescriptor, receivedPacketBuffer, sizeof(receivedPacketBuffer), 0, (struct sockaddr *)&fromWhom, &fromWhomLength);
-            //printf("OH DEAR! AN ERROR! : %s\n", strerror(errno));
-            // TODO remove the +14... it's cheating!
-            if(!quiet)
-            {
-                printf("%zd bytes received\n", bytesReceived+14);
-            }
             
             /* Format the received data into the IP struct, then shift bits */
             struct ip * receivedIPHeader = (struct ip *) receivedPacketBuffer;
@@ -236,11 +238,12 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet)
             /* Format the received data into the ICMP struct */
             receivedICMPHeader = (struct icmp *)(receivedPacketBuffer + headerLength);
             
-            /* Get the time */
-            //timeReceived = (struct timeval *)receivedPacketBuffer[8];
-            //gettimeofday(&now, NULL);
-           
-            //printf("TIME: %d %d\n\n", timeReceived.tv_sec, now.tv_sec);
+            if(!quiet)
+            {
+                // TODO remove the +14... it's cheating!
+                printf("%zd bytes received\n", bytesReceived+14);
+            }
+            
             
             /* Check if the packet was an ECHO_REPLY, and if it was meant for our computer using the ICMP id,
              which we set to the process ID */
@@ -251,11 +254,11 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet)
                     printf("Not our packet\n");
                     printf("processID = %d \t ID = %d\n", processID, receivedICMPHeader->icmp_id);
                 }
-//                csvOutput << "Type,";// << icmpHeader->icmp_type;
-//                csvOutput << "Code,";// <<icmpHeader->icmp_code;
-//                csvOutput << "Seq,";// <<icmpHeader->icmp_seq;
-//                csvOutput << "Checksum,";// <<icmpHeader->icmp_cksum;
-               // printf("%d microseconds\t", now.tv_usec - timeReceived.tv_usec);
+                // csvOutput << "Type,";// << icmpHeader->icmp_type;
+                // csvOutput << "Code,";// <<icmpHeader->icmp_code;
+                // csvOutput << "Seq,";// <<icmpHeader->icmp_seq;
+                // csvOutput << "Checksum,";// <<icmpHeader->icmp_cksum;
+                // printf("%d microseconds\t", now.tv_usec - timeReceived.tv_usec);
             }
             else
             {
@@ -275,7 +278,7 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet)
  contain essential packet information. The IP address information is
  set in main().
  
- */
+*/
 void buildPing()
 {
 	icmpHeader = (struct icmp *) packet;
@@ -297,7 +300,7 @@ void buildPing()
  Where the magic happens. Command line flags are set, program
  control is set.
  
- */
+*/
 char *argv[2];
 int main(int argc, const char** argv)
 {
@@ -305,9 +308,9 @@ int main(int argc, const char** argv)
     
     /*
      
-     Variables for command line flag processing
+      Variables for command line flag processing
      
-     */
+    */
 	const char* destination = argv[1];
 	bool timeBetweenReq = 0; // -q
     int msecsBetweenReq = 1000;
@@ -339,7 +342,7 @@ int main(int argc, const char** argv)
 	if(argc-1 == 0)
     {
        printf("Usage: ePing (IP Address) -n (number of pings) -e (num of pings to exclude from summary)\n");
-        return(0);
+    return(0);
     }
 	for(int i = 2; i < argc; i++) {
         // argv[0] is the ./a which is input
@@ -673,13 +676,12 @@ int main(int argc, const char** argv)
         printf("\nCan't run. I need root permissions to create raw socket. Sorry.\n");
         return(0);
     }
-    printf("UID: %d", getuid());
     /* Create socket descriptor for sending and receiving traffic */
 	int socketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
     
     /* Drop root permissions */
     setuid(getuid());
-    printf("UID: %d", getuid());
+    
     printf("----------------------------------\n");
     
     /* Initialize some ICMP and IP header values */
@@ -688,7 +690,10 @@ int main(int argc, const char** argv)
     /* Counting variable */
     int i = 0;
     csvOutput.open("output2.csv");
+    
+    /* Specify that we want two threads (one for listening, one for sending) */
     omp_set_num_threads(2);
+    
 	/*
      
      Execute the ping/listen functions in parallel with OpenMP threading
@@ -696,6 +701,7 @@ int main(int argc, const char** argv)
     */
     #pragma omp parallel sections
     {
+        
         /* Ping block */
         #pragma omp section
         for (i = 0; i < pingsToSend; i++)
@@ -706,11 +712,13 @@ int main(int argc, const char** argv)
             usleep(msecsBetweenReq*1000);
            
         }
+        
         /* Listen block */
         #pragma omp section
-        for(; ;) // TODO make this timeout...
+        while(1) // TODO make this timeout...
         {
-		/* Check if we're done listening */
+            
+            /* Check if we're done listening */
             if(i >= pingsToSend-1)
             {
                 break;
