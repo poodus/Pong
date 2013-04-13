@@ -110,10 +110,10 @@ ofstream csvOutput;
 
 #if __MACH__
 clock_serv_t cclock;
-mach_timespec_t sentTime;
-mach_timespec_t receivedTime;
+mach_timespec_t sentTime, receivedTime;
 #elif __WINDOWS__
-#elif __UNIX__
+#elif __LINUX__
+struct timespec sentTimeTS, receivedTimeTS;
 #endif
 
 //static timespec ts;
@@ -184,9 +184,9 @@ void pingICMP(int socketDescriptor, int icmpPayloadLength)
     #elif __WINDOWS__
     //  GetTick64Count()
     #elif __LINUX__
-    //clock_gettime();
+        clock_gettime(CLOCK_MONOTONIC, (struct timespec *)icmpHeader->icmp_data);
     #else
-    clock_gettime(CLOCK_REALTIME, &ts);
+    //clock_gettime(CLOCK_REALTIME, &ts);
     #endif
     
     /* Compute checksum */
@@ -275,7 +275,9 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet)
             #elif __WINDOWS__
                 //  GetTick64Count()
             #elif __LINUX__
-                //clock_gettime();
+                clock_gettime(CLOCK_MONOTONIC, &receivedTimeTS);
+                struct timespec * tvsend = (struct timespec *)receivedICMPHeader->icmp_data);
+                roundTripTime = (receivedTimeTS.tvsec - tvsend->tvsec)
             #endif
             
             printf("Elapsed time: %f ms \n", roundTripTime);
