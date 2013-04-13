@@ -112,7 +112,7 @@ ofstream csvOutput;
 clock_serv_t cclock;
 mach_timespec_t sentTime, receivedTime;
 #elif __WINDOWS__
-#elif __LINUX__
+#elif __GNUC__
 struct timespec sentTimeTS, receivedTimeTS;
 #endif
 
@@ -183,8 +183,8 @@ void pingICMP(int socketDescriptor, int icmpPayloadLength)
     //ts.tv_nsec = sentTime.tv_nsec;
     #elif __WINDOWS__
     //  GetTick64Count()
-    #elif __LINUX__
-        clock_gettime(CLOCK_MONOTONIC, (struct timespec *)icmpHeader->icmp_data);
+    #elif __GNUC__       
+clock_gettime(CLOCK_MONOTONIC, (struct timespec *)icmpHeader->icmp_data);
     #else
     //clock_gettime(CLOCK_REALTIME, &ts);
     #endif
@@ -274,10 +274,11 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet)
                 roundTripTime += (receivedTime.tv_nsec - tvsend->tv_nsec) / CLOCKS_PER_SEC;
             #elif __WINDOWS__
                 //  GetTick64Count()
-            #elif __LINUX__
+            #elif __GNUC__
                 clock_gettime(CLOCK_MONOTONIC, &receivedTimeTS);
-                struct timespec * tvsend = (struct timespec *)receivedICMPHeader->icmp_data);
-                roundTripTime = (receivedTimeTS.tvsec - tvsend->tvsec)
+                struct timespec * tvsend = (struct timespec *)receivedICMPHeader->icmp_data;
+                roundTripTime = (receivedTimeTS.tv_sec - tvsend->tv_sec);
+		roundTripTime += (receivedTimeTS.tv_nsec - tvsend->tv_nsec) / CLOCKS_PER_SEC;
             #endif
             
             printf("Elapsed time: %f ms \n", roundTripTime);
