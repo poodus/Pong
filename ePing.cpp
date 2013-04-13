@@ -184,7 +184,7 @@ void pingICMP(int socketDescriptor, int icmpPayloadLength)
     #elif __WINDOWS__
     //  GetTick64Count()
     #elif __GNUC__       
-clock_gettime(CLOCK_MONOTONIC, (struct timespec *)icmpHeader->icmp_data);
+    clock_gettime(CLOCK_MONOTONIC, (struct timespec *)icmpHeader->icmp_data);
     #else
     //clock_gettime(CLOCK_REALTIME, &ts);
     #endif
@@ -255,7 +255,6 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet)
 		if(FD_ISSET(socketDescriptor, &readfds))
 		{
             
-            
             /* Receive the data */
 			ssize_t bytesReceived = recvfrom(socketDescriptor, receivedPacketBuffer, sizeof(receivedPacketBuffer), 0, (struct sockaddr *)&fromWhom, &fromWhomLength);
             
@@ -278,7 +277,7 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet)
                 clock_gettime(CLOCK_MONOTONIC, &receivedTimeTS);
                 struct timespec * tvsend = (struct timespec *)receivedICMPHeader->icmp_data;
                 roundTripTime = (receivedTimeTS.tv_sec - tvsend->tv_sec);
-		roundTripTime += (receivedTimeTS.tv_nsec - tvsend->tv_nsec) / CLOCKS_PER_SEC;
+                roundTripTime += (receivedTimeTS.tv_nsec - tvsend->tv_nsec) / CLOCKS_PER_SEC;
             #endif
             
             printf("Elapsed time: %f ms \n", roundTripTime);
