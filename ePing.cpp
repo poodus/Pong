@@ -29,6 +29,7 @@
  
 */
 #include <omp.h>
+#include <math.h>
 #include <iostream>
 #include <fstream>
 #include <sys/param.h>
@@ -93,6 +94,9 @@ int processID;
 int icmpPayloadLength = 30;
 int pingsToSend = 5;
 int pingsSent = 0;
+double totalResponseTime = 0.0;
+double sumOfResponseTimesSquared = 0.0;
+int pingsReceived = 0;
 
 /*
     
@@ -117,7 +121,8 @@ struct timespec sentTimeTS, receivedTimeTS;
 #endif
 
 //static timespec ts;
-double roundTripTime;
+double roundTripTime = 0.0;
+
 
 
 /*
@@ -219,7 +224,12 @@ void pingICMP(int socketDescriptor, int icmpPayloadLength)
 */
 void report()
 {
-    printf("Statistics: \n");
+    
+    if(pingsSent != 0)
+    {
+        double average = totalResponseTime/pingsSent;
+        printf("Stats avg/stddev : %f / %f", average, sqrt((sumOfResponseTimesSquared / pingsReceived) - (average * average)));
+    }
 }
 
 /*
@@ -280,19 +290,24 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet)
                 roundTripTime += (receivedTimeTS.tv_nsec - tvsend->tv_nsec) / CLOCKS_PER_SEC;
             #endif
             
-            printf("Elapsed time: %f ms \n", roundTripTime);
-            
             if(!quiet)
             {
+                printf("Elapsed time: %f ms \n", roundTripTime);
                 // TODO remove the +14... it's cheating!
                 printf("%zd bytes received\n", bytesReceived+14);
             }
+            
+            sumOfResponseTimesSquared += roundTripTime * roundTripTime;
+            totalResponseTime += roundTripTime;
             
             
             /* Check if the packet was an ECHO_REPLY, and if it was meant for our computer using the ICMP id,
              which we set to the process ID */
             if (receivedICMPHeader->icmp_type == 0)
             {
+                /* We got a valid reply. Count it! */
+                pingsReceived++;
+                
                 if(receivedICMPHeader->icmp_id != processID)
                 {
                     printf("Not our packet\n");
