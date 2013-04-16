@@ -204,7 +204,7 @@ void pingICMP(int socketDescriptor, int icmpPayloadLength)
     /* Check if the packet sent or not */
 	if(sent > 0)
 	{
-		printf("SENT\n");
+        printf("SENT\n");
         pingsSent++;
         icmpHeader->icmp_seq++;
 	}
@@ -227,6 +227,7 @@ void report()
     
     if(pingsSent != 0)
     {
+        printf("%d sent, %d dropped\n", pingsSent, pingsSent-pingsReceived);
         double average = totalResponseTime/pingsSent;
         printf("Stats avg/stddev : %f / %f", average, sqrt((sumOfResponseTimesSquared / pingsReceived) - (average * average)));
     }
@@ -275,6 +276,9 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet)
             /* Format the received data into the ICMP struct */
             receivedICMPHeader = (struct icmp *)(receivedPacketBuffer + headerLength);
             
+            if(!quiet)
+            {
+            
             /* Get the time */
             #if __MACH__
                 clock_get_time(cclock, &receivedTime);
@@ -290,8 +294,7 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet)
                 roundTripTime += (receivedTimeTS.tv_nsec - tvsend->tv_nsec) / CLOCKS_PER_SEC;
             #endif
             
-            if(!quiet)
-            {
+            
                 printf("Elapsed time: %f ms \n", roundTripTime);
                 // TODO remove the +14... it's cheating!
                 printf("%zd bytes received\n", bytesReceived+14);
@@ -748,7 +751,7 @@ int main(int argc, const char** argv)
     
     /* Counting variable */
     int i = 0;
-    csvOutput.open("output2.csv");
+   // csvOutput.open("output2.csv");
     
     /* Specify that we want two threads (one for listening, one for sending) */
     omp_set_num_threads(2);
@@ -796,9 +799,9 @@ int main(int argc, const char** argv)
         
     }
     
-    csvOutput << "Writing this to a file,";
-    csvOutput << "Writing that to a file,";
-    csvOutput.close();
+    //csvOutput << "Writing this to a file,";
+    //csvOutput << "Writing that to a file,";
+    //csvOutput.close();
 
     /* Print final statistics and quit */
     report();
