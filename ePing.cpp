@@ -29,6 +29,7 @@
  
 */
 #include <omp.h>
+#include <math.h>
 #include <iostream>
 #include <fstream>
 #include <sys/param.h>
@@ -50,7 +51,13 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <errno.h>
+#include <time.h>
 #include <sys/time.h>
+
+#ifdef __MACH__
+#include <mach/clock.h>
+#include <mach/mach.h>
+#endif
 
 #if __unix__
 #include <arpa/inet.h>
@@ -87,6 +94,9 @@ int processID;
 int icmpPayloadLength = 30;
 int pingsToSend = 5;
 int pingsSent = 0;
+double totalResponseTime = 0.0;
+double sumOfResponseTimesSquared = 0.0;
+int pingsReceived = 0;
 
 /*
     
@@ -96,8 +106,23 @@ int pingsSent = 0;
 using namespace std;
 ofstream csvOutput;
 
-static timespec sentTime, receivedTime;
-double roundTripTime;
+/*
+ 
+ Time settings
+ 
+*/
+
+#if __MACH__
+clock_serv_t cclock;
+mach_timespec_t sentTime, receivedTime;
+#elif __WINDOWS__
+#elif __GNUC__
+struct timespec sentTimeTS, receivedTimeTS;
+#endif
+
+//static timespec ts;
+double roundTripTime = 0.0;
+
 
 
 /*
@@ -152,17 +177,29 @@ static u_short checksum(u_short *ICMPHeader, int len)
 */
 void pingICMP(int socketDescriptor, int icmpPayloadLength)
 {
-	/* Compute checksum */
+    /* Get time, put it in the packet */
+    
+    /* Set time sent */
+    #ifdef __MACH__
+    host_get_clock_service(mach_host_self(), SYSTEM_CLOCK, &cclock);
+    clock_get_time(cclock, (mach_timespec_t *)icmpHeader->icmp_data);
+    mach_port_deallocate(mach_task_self(), cclock);
+    //ts.tv_sec = sentTime.tv_sec;
+    //ts.tv_nsec = sentTime.tv_nsec;
+    #elif __WINDOWS__
+    //  GetTick64Count()
+    #elif __GNUC__       
+    clock_gettime(CLOCK_MONOTONIC, (struct timespec *)icmpHeader->icmp_data);
+    #else
+    //clock_gettime(CLOCK_REALTIME, &ts);
+    #endif
+    
+    /* Compute checksum */
 	icmpHeader->icmp_cksum = 0;
 	icmpHeader->icmp_cksum = checksum((u_short *)icmpHeader, sizeof(*icmpHeader));
     
-    /* Get time, put it in the packet */
-    
 	/* Try to send the packet */
 	sent = sendto(socketDescriptor, packet, icmpPayloadLength+8, 0, &whereto, sizeof(struct sockaddr));
-    
-    /* Set time sent */
-    clock_gettime(CLOCK_MONOTONIC, &sentTime);
     
     /* Check if the packet sent or not */
 	if(sent > 0)
@@ -187,7 +224,12 @@ void pingICMP(int socketDescriptor, int icmpPayloadLength)
 */
 void report()
 {
-    printf("Statistics: \n");
+    
+    if(pingsSent != 0)
+    {
+        double average = totalResponseTime/pingsSent;
+        printf("Stats avg/stddev : %f / %f", average, sqrt((sumOfResponseTimesSquared / pingsReceived) - (average * average)));
+    }
 }
 
 /*
@@ -222,11 +264,6 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet)
 	{
 		if(FD_ISSET(socketDescriptor, &readfds))
 		{
-            /* Get the time */
-            printf("CLOCKS PER SEC: %d\n", CLOCKS_PER_SEC);            clock_gettime(CLOCK_MONOTONIC, &receivedTime);
-            roundTripTime = (receivedTime.tv_sec - sentTime.tv_sec);
-            roundTripTime += (receivedTime.tv_nsec - sentTime.tv_nsec) / 1000000000.0;
-            printf("Elapsed time: %f ms \n", roundTripTime);
             
             /* Receive the data */
 			ssize_t bytesReceived = recvfrom(socketDescriptor, receivedPacketBuffer, sizeof(receivedPacketBuffer), 0, (struct sockaddr *)&fromWhom, &fromWhomLength);
@@ -238,17 +275,39 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet)
             /* Format the received data into the ICMP struct */
             receivedICMPHeader = (struct icmp *)(receivedPacketBuffer + headerLength);
             
+            /* Get the time */
+            #if __MACH__
+                clock_get_time(cclock, &receivedTime);
+                mach_timespec_t * tvsend = (mach_timespec_t *)receivedICMPHeader->icmp_data;
+                roundTripTime = (receivedTime.tv_sec - tvsend->tv_sec);
+                roundTripTime += (receivedTime.tv_nsec - tvsend->tv_nsec) / CLOCKS_PER_SEC;
+            #elif __WINDOWS__
+                //  GetTick64Count()
+            #elif __GNUC__
+                clock_gettime(CLOCK_MONOTONIC, &receivedTimeTS);
+                struct timespec * tvsend = (struct timespec *)receivedICMPHeader->icmp_data;
+                roundTripTime = (receivedTimeTS.tv_sec - tvsend->tv_sec);
+                roundTripTime += (receivedTimeTS.tv_nsec - tvsend->tv_nsec) / CLOCKS_PER_SEC;
+            #endif
+            
             if(!quiet)
             {
+                printf("Elapsed time: %f ms \n", roundTripTime);
                 // TODO remove the +14... it's cheating!
                 printf("%zd bytes received\n", bytesReceived+14);
             }
+            
+            sumOfResponseTimesSquared += roundTripTime * roundTripTime;
+            totalResponseTime += roundTripTime;
             
             
             /* Check if the packet was an ECHO_REPLY, and if it was meant for our computer using the ICMP id,
              which we set to the process ID */
             if (receivedICMPHeader->icmp_type == 0)
             {
+                /* We got a valid reply. Count it! */
+                pingsReceived++;
+                
                 if(receivedICMPHeader->icmp_id != processID)
                 {
                     printf("Not our packet\n");
