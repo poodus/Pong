@@ -230,7 +230,7 @@ void report()
     if(pingsSent != 0)
     {
         printf("-----------------------\n");
-        printf("%d packets sent, %d dropped", (pingsSent-pingsToExclude), (pingsSent-pingsToExclude)-pingsReceived);
+        printf("%d packets sent, %d dropped", (pingsSent), (pingsSent-pingsToExclude)-pingsReceived);
         if(excludingPing)
         {
             printf(", %d excluded from summary\n", pingsToExclude);
@@ -239,7 +239,7 @@ void report()
             printf("\n");
         }
         double average = totalResponseTime/(pingsSent-pingsToExclude);
-        printf("Stats avg/stddev : %f / %f", average, sqrt((sumOfResponseTimesSquared / pingsReceived) - (average * average)));
+        printf("Stats avg/stddev : %f / %f\n", average, sqrt((sumOfResponseTimesSquared / pingsReceived) - (average * average)));
     }
 }
 
@@ -430,7 +430,7 @@ int main(int argc, const char** argv)
 				{
 					timeBetweenReq = true;
 					msecsBetweenReq = atoi(argv[i+1]);
-					printf("Flag -q set! Waiting %d milliseconds between ping requests.\n",msecsBetweenReq);
+					printf("Flag -q set! Waiting %f milliseconds between ping requests.\n", msecsBetweenReq);
 					i++;
 				}
 				else
