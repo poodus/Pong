@@ -539,17 +539,25 @@ if(result != 0) {
 	*/
 	#elif WIN32
 	printf("main() mark 5 (windows)\n");
-	if(WSAStringToAddress((char *)destination,AF_INET,NULL,(LPSOCKADDR)&IPHeader.destinationIPAddress,(int*)sizeof(IPHeader.destinationIPAddress))!=1)
+	int sizeOfAddress=sizeof(IPHeader.destinationIPAddress);
+	if(WSAStringToAddress((char *)destination,AF_INET,NULL,(LPSOCKADDR)&IPHeader.destinationIPAddress.S_un.S_un_W,&sizeOfAddress)!=0)
 	{
 		int error=WSAGetLastError();
-		printf((char*)error);
+		std::cout<<error<<std::endl;
+		std::cout<<sizeOfAddress<<std::endl;
 	}
 	printf("main() mark 5.1(windows)\n");
-	if(WSAStringToAddress((char*)destination,AF_INET,NULL,(LPSOCKADDR)&(socketAddress->sin_addr),(int*)sizeof(socketAddress->sin_addr))!=1)
+	if(WSAStringToAddress((char*)destination,AF_INET,NULL,(LPSOCKADDR)&(socketAddress->sin_addr),(int*)sizeof(socketAddress->sin_addr))!=0)
 	{
-		printf("inet_pton error for Socket Address\n");
+		int error=WSAGetLastError();
+		std::cout<<error<<std::endl;
 	}
-	WSAStringToAddress((char*)hostIP,AF_INET,NULL,(LPSOCKADDR)&(IPHeader.sourceIPAddress),(int*)sizeof(IPHeader.sourceIPAddress));
+	if(WSAStringToAddress((char*)hostIP,AF_INET,NULL,(LPSOCKADDR)&(IPHeader.sourceIPAddress),(int*)sizeof(IPHeader.sourceIPAddress))!=0)
+	{
+		int error=WSAGetLastError();
+		std::cout<<error<<std::endl;
+	
+	}
 	#endif
 	socketAddress->sin_port=htons(3490);
 	std::cout<<socketAddress->sin_port<<std::endl;
