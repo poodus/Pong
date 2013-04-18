@@ -17,19 +17,10 @@
 
 */
 #include <sys/param.h>
-#include <sys/socket.h>
 #include <sys/file.h>
 #include <sys/time.h>
-#include <sys/signal.h>
 #include <sys/unistd.h>
-#include <sys/select.h>
 
-#include <netdb.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <netinet/ip_icmp.h>
-#include <arpa/inet.h>
-#include <netdb.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,9 +31,30 @@
 #include <arpa/inet.h>
 #include <time.h>
 
-#elif __WINDOWS__
+
+#include <sys/socket.h>
+#include <sys/signal.h>
+#include <sys/select.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <netinet/ip_icmp.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+
+#elif WIN32
 #include <windows.h>
+#include <ws2tcpip.h>
 #include <winsock2.h>
+
+// ICMP header
+struct icmp {
+    BYTE icmp_type;          // ICMP packet type
+    BYTE icmp_code;          // Type sub code
+    USHORT icmp_cksum;
+    USHORT icmp_id;
+    USHORT icmp_seq;
+    ULONG timestamp;    // not part of ICMP, but we need it
+};
 #endif
 
 /*
@@ -292,6 +304,14 @@ void buildPing(int REQ_DATASIZE, int seq)
 char *argv[2];
 int main(int argc, const char** argv)
 {
+	#ifdef WIN32
+	WSADATA wsaData;
+	int result=WSAStartup(MAKEWORD(2,0), &wsaData);
+	if(result != 0) {
+			printf("WSAStartup failed with error: %d\n", wsaData);
+			return 1;
+		}
+	#endif
 	printf("------------------\n");
 	// REMOVE THIS LATER
 	const int REQ_DATASIZE = 50;
@@ -649,7 +669,27 @@ int main(int argc, const char** argv)
 		WINDOWS block for setting the address
 		
 	*/
-	#elif __WINDOWS__
+	#elif WIN32
+	printf("main() mark 5 (windows)\n");
+	int sizeOfAddress=sizeof(IPHeader.destinationIPAddress);
+	if(WSAStringToAddress((char *)destination,AF_INET,NULL,(LPSOCKADDR)&IPHeader.destinationIPAddress.S_un.S_un_W,&sizeOfAddress)!=0)
+	{
+		int error=WSAGetLastError();
+		std::cout<<error<<std::endl;
+		std::cout<<sizeOfAddress<<std::endl;
+	}
+	printf("main() mark 5.1(windows)\n");
+	if(WSAStringToAddress((char*)destination,AF_INET,NULL,(LPSOCKADDR)&(socketAddress->sin_addr),(int*)sizeof(socketAddress->sin_addr))!=0)
+	{
+		int error=WSAGetLastError();
+		std::cout<<error<<std::endl;
+	}
+	if(WSAStringToAddress((char*)hostIP,AF_INET,NULL,(LPSOCKADDR)&(IPHeader.sourceIPAddress),(int*)sizeof(IPHeader.sourceIPAddress))!=0)
+	{
+		int error=WSAGetLastError();
+		std::cout<<error<<std::endl;
+	
+	}
 	printf("main() mark 5 (windows)\n");
 	if(InetPton(AF_INET,destination,&IPHeader.destinationIPAddress)!=1)
 	{
@@ -688,4 +728,9 @@ int main(int argc, const char** argv)
     }
 	printf("main() end\n");
 	printf("------------------\n");
-}
+	
+	
+	#ifdef WIN32
+	int esult = WSACleanup();
+	#endif
+	}
