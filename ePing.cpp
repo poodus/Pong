@@ -206,7 +206,6 @@ void pingICMP(int socketDescriptor, int icmpPayloadLength)
     /* Check if the packet sent or not */
 	if(sent > 0)
 	{
-        printf("SENT\n");
         pingsSent++;
         icmpHeader->icmp_seq++;
 	}
@@ -229,7 +228,7 @@ void report()
     
     if(pingsSent != 0)
     {
-        printf("-----------------------\n");
+        printf("-------------------------------------------------------\n");
         printf("%d packets sent, %d dropped", (pingsSent), (pingsSent-pingsToExclude)-pingsReceived);
         if(excludingPing)
         {
@@ -240,6 +239,7 @@ void report()
         }
         double average = totalResponseTime/(pingsSent-pingsToExclude);
         printf("Stats avg/stddev : %f / %f\n", average, sqrt((sumOfResponseTimesSquared / pingsReceived) - (average * average)));
+        printf("-------------------------------------------------------\n");
     }
 }
 
@@ -305,8 +305,6 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
                     roundTripTime = (receivedTimeTS.tv_sec - tvsend->tv_sec);
                     roundTripTime += (receivedTimeTS.tv_nsec - tvsend->tv_nsec) / CLOCKS_PER_SEC;
 #endif
-                    
-                    
                 }
                 
                 sumOfResponseTimesSquared += roundTripTime * roundTripTime;
@@ -328,7 +326,19 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
                     else
                     {
                         // TODO remove the +14... it's cheating!
-                        printf("RECEIVED Packet %d / %zd bytes / RTT: %f ms\n", receivedICMPHeader->icmp_seq, bytesReceived+14, roundTripTime);
+                        if(roundTripTime > 0)
+                        {
+                            /* Get presentation format of source IP */
+                            char str[INET_ADDRSTRLEN];
+                            inet_ntop(AF_INET, &(receivedIPHeader->ip_src), str, INET_ADDRSTRLEN);
+                            printf("%d bytes from %s  seq:%d  ttl:%d  time:%f ms\n", (bytesReceived+14), str, receivedICMPHeader->icmp_seq, (int)receivedIPHeader->ip_ttl, roundTripTime);
+                        }
+                        else
+                        {
+                            printf("BUG! Negative time value. Yeah right. I didn't believe that for a minute.\n");
+                            exit(0);
+                        }
+                        
                     }
                 }
                 else
@@ -376,7 +386,7 @@ void buildPing()
 char *argv[2];
 int main(int argc, const char** argv)
 {
-	printf("----------------------------------\n");
+	printf("-------------------------------------------------------\n");
     
     /*
      
@@ -676,6 +686,8 @@ int main(int argc, const char** argv)
 	}
 	printf("Destination IP set to: %s\n", argv[1]);
 	char hostName[128];
+    // DNS resolution for domain names.
+    //getnameinfo(<#const struct sockaddr *#>, <#socklen_t#>, <#char *#>, <#socklen_t#>, <#char *#>, <#socklen_t#>, <#int#>);
 	gethostname(hostName, 128);
 	if((hostName) == NULL)
 	{
@@ -693,7 +705,8 @@ int main(int argc, const char** argv)
 	socketAddress = (struct sockaddr_in *)&whereto;
 	if(inet_pton(AF_INET,destination,&(socketAddress->sin_addr))!=1)
 	{
-		printf("inet_pton error for Socket Address\n");
+		printf("inet_pton error for socket address\n");
+        printf("You probably didn't type in an valid IP Address...\n");
         exit(0);
 	}
 	/*
@@ -705,7 +718,8 @@ int main(int argc, const char** argv)
 	socketAddress = (struct sockaddr_in *)&whereto;
 	if(inet_pton(AF_INET,destination,&(socketAddress->sin_addr))!=1)
 	{
-		printf("inet_pton error for Socket Address\n");
+		printf("inet_pton error for socket address\n");
+        printf("You probably didn't type in an valid IP Address...\n");
         exit(0);
 	}
 	/*
@@ -722,7 +736,8 @@ int main(int argc, const char** argv)
 	}
 	if(InetPton(AF_INET,destination,&(socketAddress->sin_addr))!=1)
 	{
-		printf("inet_pton error for Socket Address\n");
+		printf("inet_pton error for socket address\n");
+        printf("You probably didn't type in an valid IP Address...\n");
         exit(0);
 	}
 	InetPton(AF_INET,hostIP,&IPHeader.sourceIPAddress);
@@ -730,14 +745,14 @@ int main(int argc, const char** argv)
     
     /*
      
-     Set up the sockets
+     Set up the socket
      
      */
 	sockaddr_in sourceSocket;
 	sourceSocket.sin_addr = srcIP;
 	sourceSocket.sin_family = AF_INET;
     
-    /* We use the process ID from this program as our ICMP id */
+    /* We use the process ID from this program as our ICMP packet id */
 	processID = getpid() & 0xFFFF;
     
     /* Check if we're root. If not, we can't create the raw socket necessary for ICMP */
@@ -747,13 +762,14 @@ int main(int argc, const char** argv)
         printf("\nCan't run. I need root permissions to create raw socket. Sorry.\n");
         return(0);
     }
+    
     /* Create socket descriptor for sending and receiving traffic */
 	int socketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
     
     /* Drop root permissions */
     setuid(getuid());
     
-    printf("----------------------------------\n");
+    printf("-------------------------------------------------------\n");
     
     /* Initialize some ICMP and IP header values */
     buildPing();
@@ -762,7 +778,6 @@ int main(int argc, const char** argv)
     int i = 0;
     // csvOutput.open("output2.csv");
     
-    
     /* Specify that we want two threads (one for listening, one for sending) */
     omp_set_num_threads(2);
     
@@ -770,7 +785,7 @@ int main(int argc, const char** argv)
      
      Execute the ping/listen functions in parallel with OpenMP threading
      
-     */
+    */
 #pragma omp parallel sections
     {
         
