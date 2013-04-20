@@ -265,7 +265,9 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
 	fd_set readfds;
 	FD_SET(socketDescriptor, &readfds);
 	struct timeval timeout;
-	timeout.tv_sec = timeoutLength; // timeout period, seconds (added second, if that matters)
+    //printf("Timeout length: %f", timeoutLength);
+	timeout.tv_sec = 2; // timeout period, seconds (added second, if that matters)
+    //printf("Timeout length")
 	timeout.tv_usec = 0; // timeuot period, microseconds 1,000,000 micro = second
     // TODO Make this timeout dependent on how many pings have been sent...
 	int selectStatus = select(socketDescriptor+1, &readfds, NULL, NULL, &timeout);
