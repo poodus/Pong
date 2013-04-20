@@ -126,7 +126,7 @@ clock_serv_t cclock;
 mach_timespec_t sentTime, receivedTime;
 #elif __WINDOWS__
 #elif __GNUC__
-struct timespec sentTimeTS, receivedTimeTS;
+struct timespec sentTime2, receivedTime2;
 #endif
 
 //static timespec ts;
@@ -301,16 +301,31 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
                     /* Get the time */
 #if __MACH__
                     clock_get_time(cclock, &receivedTime);
-                    mach_timespec_t * tvsend = (mach_timespec_t *)receivedICMPHeader->icmp_data;
-                    roundTripTime = (receivedTime.tv_sec - tvsend->tv_sec);
-                    roundTripTime += (receivedTime.tv_nsec - tvsend->tv_nsec) / CLOCKS_PER_SEC;
+                    mach_timespec_t * sentTime = (mach_timespec_t *)receivedICMPHeader->icmp_data;
+                    /* Thanks Richard Stevens' book UNIX Network Programming for helping with
+                     this next chunk of time processing code */
+                    if ( (receivedTime.tv_nsec -= sentTime->tv_nsec) < 0)
+                    {
+                        --receivedTime.tv_sec;
+                        receivedTime.tv_nsec += 1000000000;
+                    }
+                    receivedTime.tv_sec -= sentTime->tv_sec;
+                    roundTripTime = receivedTime.tv_sec * 1000.0 + receivedTime.tv_nsec / 1000000.0;
+                    
 #elif __WINDOWS__
                     //  GetTick64Count()
 #elif __GNUC__
                     clock_gettime(CLOCK_MONOTONIC, &receivedTimeTS);
-                    struct timespec * tvsend = (struct timespec *)receivedICMPHeader->icmp_data;
-                    roundTripTime = (receivedTimeTS.tv_sec - tvsend->tv_sec);
-                    roundTripTime += (receivedTimeTS.tv_nsec - tvsend->tv_nsec) / CLOCKS_PER_SEC;
+                    struct timespec * sentTime2 = (struct timespec *)receivedICMPHeader->icmp_data;
+                    /* Thanks Richard Stevens' book UNIX Network Programming for helping with 
+                     this next chunk of time processing code */
+                    if ( (receivedTime2.tv_nsec -= sentTime2->tv_nsec) < 0)
+                    {
+                        --receivedTime2.tv_sec;
+                        receivedTime2.tv_nsec += 1000000000;
+                    }
+                    receivedTime2.tv_sec -= sentTime2->tv_sec;
+                    roundTripTime = receivedTime2.tv_sec * 1000.0 + receivedTime2.tv_nsec / 1000000.0;
 #endif
                 }
                 
@@ -338,7 +353,7 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
                             /* Get presentation format of source IP */
                             char str[INET_ADDRSTRLEN];
                             inet_ntop(AF_INET, &(receivedIPHeader->ip_src), str, INET_ADDRSTRLEN);
-                            printf("%d bytes from %s  seq:%d  ttl:%d  time:%f ms\n", (bytesReceived+14), str, receivedICMPHeader->icmp_seq, (int)receivedIPHeader->ip_ttl, roundTripTime);
+                            printf("%d bytes from %s  packet number:%d  ttl:%d  time:%f ms\n", (bytesReceived+14), str, receivedICMPHeader->icmp_seq, (int)receivedIPHeader->ip_ttl, roundTripTime);
                         }
                         else
                         {
