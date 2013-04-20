@@ -315,7 +315,7 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
 #elif __WINDOWS__
                     //  GetTick64Count()
 #elif __GNUC__
-                    clock_gettime(CLOCK_MONOTONIC, &receivedTimeTS);
+                    clock_gettime(CLOCK_MONOTONIC, &receivedTime2);
                     struct timespec * sentTime2 = (struct timespec *)receivedICMPHeader->icmp_data;
                     /* Thanks Richard Stevens' book UNIX Network Programming for helping with 
                      this next chunk of time processing code */
