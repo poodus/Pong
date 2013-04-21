@@ -1,36 +1,23 @@
 /*
- ---------------------------------------------------------------
+ 
  ePing
- ---------------------------------------------------------------
+ 
  Using the Internet Control Message Protocol (ICMP) ECHO_REQUEST
  and ECHO_REPLY messages to measure round-trip-delays and packet
  loss across network paths. Eventually, we'd like to expand
  this to UDP pinging as well.
  
  Created as a 2013 NDSU Capstone Project with specifications
- and requiremetns provided by Ericsson in Sweden. Our project
- mentor is Oskar Myrberg.
+ and requiremetns provided by Ericsson.
  
- 
- ---------------------------------------------------------------
- Credits
- ---------------------------------------------------------------
- 
- This is an extension/reimplementation of the original ping.c.
+ An extension/reimplementation of the original ping.c.
  Emphasis is on readability and ease of understanding the code.
+ Inspiration and design inspired by:
  
- Inspiration and design inspired by the original PING, which was
- created by Mike Muuss, U. S. Army Ballistic Research Laboratory
- in December, 1983. Modified at Uc Berkeley.
- 
- We'd like to express our gratitude to Brian Hall for creating
- free book "Beej's Guide to Network Programming: Using Internet Sockets".
- This was a huge help to our project. Brian "Beej Jorgensen" Hall
- http://www.beej.us/
- 
- ---------------------------------------------------------------
- Feel free to modify this software as you wish. We are not liable
- for anything. Use at your own risk/discretion, whatever.
+ Mike Muuss
+ U. S. Army Ballistic Research Laboratory
+ December, 1983
+ Modified at Uc Berkeley
  
  */
 
@@ -76,6 +63,7 @@
 #elif WIN32
 #include <windows.h>
 #include <winsock2.h>
+struct sockaddr_in *socketAddress;
 // ICMP header
 struct icmp {
     BYTE icmp_type;          // ICMP packet type
@@ -93,8 +81,7 @@ struct icmp {
  
  */
 
-struct sockaddr_in *socketAddress;
-struct sockaddr whereto;
+struct sockaddr_in *whereto;
 struct in_addr destIP;
 struct in_addr srcIP;
 struct icmp * icmpHeader;
@@ -119,7 +106,6 @@ double totalResponseTime = 0.0;
 double sumOfResponseTimesSquared = 0.0;
 int pingsReceived = 0;
 bool excludingPing;
-bool outputToCSV;
 
 /*
  
@@ -201,17 +187,20 @@ static u_short checksum(u_short *ICMPHeader, int len)
 void pingICMP(int socketDescriptor, int icmpPayloadLength)
 {
     /* Get time, put it in the packet */
+    
+    /* Set time sent */
 #ifdef __MACH__
     host_get_clock_service(mach_host_self(), SYSTEM_CLOCK, &cclock);
     clock_get_time(cclock, (mach_timespec_t *)icmpHeader->icmp_data);
     mach_port_deallocate(mach_task_self(), cclock);
-    
+    //ts.tv_sec = sentTime.tv_sec;
+    //ts.tv_nsec = sentTime.tv_nsec;
 #elif __WINDOWS__
     //  GetTick64Count()
-    
 #elif __GNUC__
     clock_gettime(CLOCK_MONOTONIC, (struct timespec *)icmpHeader->icmp_data);
-
+#else
+    //clock_gettime(CLOCK_REALTIME, &ts);
 #endif
     
     /* Compute checksum */
@@ -219,8 +208,7 @@ void pingICMP(int socketDescriptor, int icmpPayloadLength)
 	icmpHeader->icmp_cksum = checksum((u_short *)icmpHeader, sizeof(*icmpHeader));
     
 	/* Try to send the packet */
-	sent = sendto(socketDescriptor,
-                  packet, icmpPayloadLength+8, 0, &whereto, sizeof(struct sockaddr));
+	sent = sendto(socketDescriptor, packet, icmpPayloadLength+8, 0, (struct sockaddr *)whereto, sizeof(struct sockaddr));
     
     /* Check if the packet sent or not */
 	if(sent > 0)
@@ -247,7 +235,7 @@ void report()
     
     if(pingsSent != 0)
     {
-        printf("-------------------------------------------------------\n");
+        printf("----------------------------------------------------------------\n");
         printf("%d packets sent, %d dropped", (pingsSent), (pingsSent-pingsToExclude)-pingsReceived);
         if(excludingPing)
         {
@@ -315,7 +303,6 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
 #if __MACH__
                     clock_get_time(cclock, &receivedTime);
                     mach_timespec_t * sentTime = (mach_timespec_t *)receivedICMPHeader->icmp_data;
-                    
                     /* Thanks Richard Stevens' book UNIX Network Programming for helping with
                      this next chunk of time processing code */
                     if ( (receivedTime.tv_nsec -= sentTime->tv_nsec) < 0)
@@ -331,7 +318,7 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
 #elif __GNUC__
                     clock_gettime(CLOCK_MONOTONIC, &receivedTime2);
                     struct timespec * sentTime2 = (struct timespec *)receivedICMPHeader->icmp_data;
-                    /* Thanks Richard Stevens' book UNIX Network Programming for helping with 
+                    /* Thanks Richard Stevens' book UNIX Network Programming for helping with
                      this next chunk of time processing code */
                     if ( (receivedTime2.tv_nsec -= sentTime2->tv_nsec) < 0)
                     {
@@ -348,11 +335,9 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
                 
                 
                 /* Check if the packet was an ECHO_REPLY, and if it was meant for our computer using the ICMP id,
-                 which we set to the process ID. Otherwise, it's not our packet! */
+                 which we set to the process ID */
                 if (receivedICMPHeader->icmp_type == 0)
                 {
-                    /* We got a valid reply. Count it! */
-                    pingsReceived++;
                     
                     if(receivedICMPHeader->icmp_id != processID)
                     {
@@ -361,25 +346,19 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
                     }
                     else
                     {
-                        // TODO remove the +14... it's cheating!
-                        if(roundTripTime > 0)
-                        {
-                            /* Get presentation format of source IP */
-                            char str[INET_ADDRSTRLEN];
-                            inet_ntop(AF_INET, &(receivedIPHeader->ip_src), str, INET_ADDRSTRLEN);
-                            printf("%d bytes from %s  packet number:%d  ttl:%d  time:%f ms\n", (bytesReceived+14), str, receivedICMPHeader->icmp_seq, (int)receivedIPHeader->ip_ttl, roundTripTime);
-                        }
-                        else
-                        {
-                            printf("BUG! Negative time value. Yeah right. I didn't believe that for a minute.\n");
-                            exit(0);
-                        }
+                        /* We got a valid reply. Count it! */
+                        pingsReceived++;
                         
+                        // TODO remove the +14... it's cheating!
+                        /* Get presentation format of source IP */
+                        char str[INET_ADDRSTRLEN];
+                        inet_ntop(AF_INET, &(receivedIPHeader->ip_src), str, INET_ADDRSTRLEN);
+                        printf("%d bytes from %s packet number:%d  ttl:%d  time:%f ms\n", (bytesReceived+14), str, receivedICMPHeader->icmp_seq, (int)receivedIPHeader->ip_ttl, roundTripTime);
                     }
                 }
                 else
                 {
-                    printf("Not a reply\n");
+                    printf("Not a reply.\n");
                 }
             }
             
@@ -400,15 +379,15 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
 void buildPing()
 {
 	icmpHeader = (struct icmp *) packet;
-    ipHeader = (struct ip *) packetIP;
-	icmpHeader->icmp_type = 8; /* Type 8 is ECHO_REQUEST */
+    ipHeader= (struct ip *) packetIP;
+	icmpHeader->icmp_type = 8; // This shouldn't change
 	icmpHeader->icmp_code = 0;
-	icmpHeader->icmp_cksum = 0; /* Just initializing this - Checksum is computed later */
-	icmpHeader->icmp_seq = 1; /* Number the packets, starting at 1 */
-	icmpHeader->icmp_id = processID; /* Using the process ID to give the packet an ID */
+	icmpHeader->icmp_cksum = 0;
+	icmpHeader->icmp_seq = 1;
+	icmpHeader->icmp_id = processID;
 	ipHeader->ip_p = 1;
-	ipHeader->ip_ttl = 64; /* Recommended value, according to the internet. */
-	ipHeader->ip_hl = 5; /* Header length */
+	ipHeader->ip_ttl = 64; //Recommended value, according to the internet.
+	ipHeader->ip_hl = 5;
 }
 
 /*
@@ -422,15 +401,15 @@ void buildPing()
 char *argv[2];
 int main(int argc, const char** argv)
 {
-	#ifdef WIN32
+#ifdef WIN32
 	WSADATA wsaData;
 	int result=WSAStartup(MAKEWORD(2,0), &wsaData);
 	if(result != 0) {
-			printf("WSAStartup failed with error: %d\n", wsaData);
-			return 1;
-		}
-	#endif
-	printf("-------------------------------------------------------\n");
+        printf("WSAStartup failed with error: %d\n", wsaData);
+        return 1;
+    }
+#endif
+	printf("----------------------------------------------------------------\n");
     
     /*
      
@@ -445,6 +424,7 @@ int main(int argc, const char** argv)
 	bool datagramSize = 0; // -d
     int bytesDatagram = 0;
 	bool payloadSize = 0; // -p
+    int bytesPayload = 0;
 	bool randSizeMinMax = 0; // -l
     int bytesSizeMin = 0;
     int bytesSizeMax = 0;
@@ -525,7 +505,7 @@ int main(int argc, const char** argv)
 				{
 					//datagramSize = true;
 					bytesDatagram = atoi(argv[i+1]);
-					printf("Flag -d set! Datagram will be %d bytes.\n", bytesDatagram);
+					printf("Flag -d set! Datagram will be %d bytes large.\n", bytesDatagram);
 					i++;
 				}
 				else
@@ -545,8 +525,8 @@ int main(int argc, const char** argv)
 				if(i + 1 < argc && atoi(argv[i+1]) > 0)
 				{
 					payloadSize = true;
-					icmpPayloadLength = atoi(argv[i+1]);
-					printf("Flag -p set! Payload size will be %d bytes.\n", icmpPayloadLength);
+					bytesPayload = atoi(argv[i+1]);
+					printf("Flag -p set! Payload size will be %d bytes large.\n", bytesPayload);
 					i++;
 				}
 				else
@@ -722,75 +702,52 @@ int main(int argc, const char** argv)
 			}
 			
 		}
-        else if(strcmp(argv[i],"-c") == 0)
-		{
-			if(i + 1 < argc && atoi(argv[i+1]) > 0)
-			{
-                outputToCSV = 1;
-				printf("Flag -c set! Output will go to CSV file\n");
-				i+=2;
-			}
-			
-		}
 		else
 		{
 			printf("Flag not recognized, \"%s\"\n",argv[i]);
 		}
 	}
-	
+	printf("Destination set to: %s\n", argv[1]);
     
-    // DNS resolution for domain names.  if destination is not already an IP address, convert it to one
-    //(const char *node, const char *service, const struct addrinfo *hints, struct addrinfo **res);
-    struct addrinfo *res, hints;
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_RAW;
-    getaddrinfo(destination, NULL, &hints, &res);
+    struct addrinfo *result, hints;
+    hints.ai_family = AF_INET;    /* Allow IPv4 or IPv6 */
+    hints.ai_socktype = SOCK_RAW; /* Datagram socket */
+    hints.ai_canonname = NULL;
+    hints.ai_addr = NULL;
+    hints.ai_next = NULL;
     
-
-	/*
-     
-     UNIX and APPLE block for setting the source and destination IP address
-     
-     */
-#if __unix__ || __APPLE__
-//	socketAddress = (struct sockaddr_in *)&whereto;
-//    /* This function converts the character string src into a 
-//     network address structure in the af address family, then 
-//     copies the network address structure to dst. */
-//    // inet_pton(int af, const char *src, void *dst);
-//	if(inet_pton(AF_INET, (struct sockaddr)&res->ai_addr, &(socketAddress->sin_addr))!=1)
-//	{
-//		printf("inet_pton error for socket address\n");
-//        printf("You probably didn't type in an valid IP Address...\n");
-//        exit(0);
-//	}
-
+    /* Convert address */
+    getaddrinfo(destination, NULL, &hints, &result);
+    
+    whereto = (struct sockaddr_in *)result->ai_addr;
+    
+    
 	/*
      
      WINDOWS block for setting the source and destination IP address
      
      */
-#elif WIN32
+#if WIN32
 	printf("main() mark 5 (windows)\n");
+    sockAddress = &whereto;
 	int sizeOfAddress=sizeof(IPHeader.destinationIPAddress);
-	if(WSAStringToAddress((char *)destination, AF_INET ,NULL, (LPSOCKADDR)&IPHeader.destinationIPAddress.S_un.S_un_W,&sizeOfAddress)!=0)
+	if(WSAStringToAddress((char *)destination,AF_INET,NULL,(LPSOCKADDR)&IPHeader.destinationIPAddress.S_un.S_un_W,&sizeOfAddress)!=0)
 	{
-		int error = WSAGetLastError();
+		int error=WSAGetLastError();
 		std::cout<<error<<std::endl;
 		std::cout<<sizeOfAddress<<std::endl;
 	}
 	printf("main() mark 5.1(windows)\n");
-	if(WSAStringToAddress((char*)destination,AF_INET,NULL,(LPSOCKADDR)&(socketAddress->sin_addr),(int*)sizeof(socketAddress->sin_addr))!= 0)
+	if(WSAStringToAddress((char*)destination,AF_INET,NULL,(LPSOCKADDR)&(socketAddress->sin_addr),(int*)sizeof(socketAddress->sin_addr))!=0)
 	{
-		int error = WSAGetLastError();
+		int error=WSAGetLastError();
 		std::cout<<error<<std::endl;
 	}
 #endif
     
     /*
      
-     Set up the socket
+     Set up the listening sockaddr_in struct
      
      */
 	sockaddr_in sourceSocket;
@@ -811,13 +768,10 @@ int main(int argc, const char** argv)
     /* Create socket descriptor for sending and receiving traffic */
 	int socketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
     
-    /* UDP Version would be something like this: */
-    // int socketDescriptor = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    
     /* Drop root permissions */
     setuid(getuid());
     
-    printf("-------------------------------------------------------\n");
+    printf("----------------------------------------------------------------\n");
     
     /* Initialize some ICMP and IP header values */
     buildPing();
@@ -833,7 +787,7 @@ int main(int argc, const char** argv)
      
      Execute the ping/listen functions in parallel with OpenMP threading
      
-    */
+     */
 #pragma omp parallel sections
     {
         
@@ -858,7 +812,7 @@ int main(int argc, const char** argv)
             {
                 listenICMP(socketDescriptor, &sourceSocket, 0, 0, msecsBetweenReq*2000);
             }
-
+            
             /* Check if we're done listening */
             if(i == pingsToSend-1)
             {
@@ -874,8 +828,8 @@ int main(int argc, const char** argv)
     
     /* Print final statistics and quit */
     report();
-	#ifdef WIN32
+#ifdef WIN32
 	int esult = WSACleanup();
-	#endif
+#endif
     return(0);
 }

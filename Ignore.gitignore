@@ -2,5 +2,6 @@
 *.out
 *.stackdump
 *.c~
+*.csv
 *.orig
 *.metadata
