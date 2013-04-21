@@ -44,6 +44,7 @@
 #include <errno.h>
 #include <time.h>
 #include <sys/time.h>
+#include <sys/types.h>
 
 #ifdef __MACH__
 #include <mach/clock.h>
@@ -446,7 +447,7 @@ int main(int argc, const char** argv)
 	if(argc-1 == 0)
     {
         printf("Usage: ePing (IP Address) -n (number of pings) -e (num of pings to exclude from summary)\n");
-        return(0);
+        return(1);
     }
 	for(int i = 2; i < argc; i++) {
         // argv[0] is the ./a which is input
@@ -711,14 +712,16 @@ int main(int argc, const char** argv)
     
     struct addrinfo *result, hints;
     hints.ai_family = AF_INET;    /* Allow IPv4 or IPv6 */
-    hints.ai_socktype = SOCK_RAW; /* Datagram socket */
-    hints.ai_canonname = NULL;
-    hints.ai_addr = NULL;
-    hints.ai_next = NULL;
-    
+    hints.ai_socktype = SOCK_RAW; /* RAW socket */
+    hints.ai_flags = AI_PASSIVE;  /* Fill in my IP address */
+    int status;
     /* Convert address */
-    getaddrinfo(destination, NULL, &hints, &result);
-    
+    if((status = getaddrinfo(destination, NULL, &hints, &result)) != 0)
+    {
+        printf("getaddrinfo error: %s\n", gai_strerror(status));
+        exit(1);
+    }
+
     whereto = (struct sockaddr_in *)result->ai_addr;
     
     
@@ -762,7 +765,7 @@ int main(int argc, const char** argv)
     {
         printf("UID: %d EUID: %d", getuid(), geteuid());
         printf("\nCan't run. I need root permissions to create raw socket. Sorry.\n");
-        return(0);
+        return(1);
     }
     
     /* Create socket descriptor for sending and receiving traffic */
