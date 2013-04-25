@@ -797,7 +797,7 @@ int main(int argc, const char** argv)
         for (i = 0; i < pingsToSend; i++)
         {
             pingICMP(socketDescriptor, icmpPayloadLength);
-            usleep(msecsBetweenReq*1000);
+            usleep(msecsBetweenReq * 1000);
         }
         
         /* Listen block */
@@ -807,11 +807,11 @@ int main(int argc, const char** argv)
             /* If we're excluding some pings, listen but don't print any info */
             if(excludingPing && pingsSent <= pingsToExclude)
             {
-                listenICMP(socketDescriptor, &sourceSocket, 1, 1, msecsBetweenReq*2000);
+                listenICMP(socketDescriptor, &sourceSocket, 1, 1, msecsBetweenReq * 2000);
             }
             else
             {
-                listenICMP(socketDescriptor, &sourceSocket, 0, 0, msecsBetweenReq*2000);
+                listenICMP(socketDescriptor, &sourceSocket, 0, 0, msecsBetweenReq * 2000);
             }
             
             /* Check if we're done listening */
