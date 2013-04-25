@@ -331,7 +331,8 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
 #endif
                 }
                 
-                
+                sumOfResponseTimesSquared += roundTripTime * roundTripTime;
+                totalResponseTime += roundTripTime;
                 
                 
                 /* Check if the packet was an ECHO_REPLY, and if it was meant for our computer using the ICMP id,
@@ -348,8 +349,6 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
                     {
                         /* We got a valid reply. Count it! */
                         pingsReceived++;
-                        sumOfResponseTimesSquared += roundTripTime * roundTripTime;
-                        totalResponseTime += roundTripTime;
                         
                         // TODO remove the +14... it's cheating!
                         /* Get presentation format of source IP */
@@ -722,7 +721,7 @@ int main(int argc, const char** argv)
         printf("getaddrinfo error: %s\n", gai_strerror(status));
         exit(1);
     }
-
+    
     whereto = (struct sockaddr_in *)result->ai_addr;
     
     
