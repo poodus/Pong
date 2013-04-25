@@ -331,10 +331,6 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
 #endif
                 }
                 
-                sumOfResponseTimesSquared += roundTripTime * roundTripTime;
-                totalResponseTime += roundTripTime;
-                
-                
                 /* Check if the packet was an ECHO_REPLY, and if it was meant for our computer using the ICMP id,
                  which we set to the process ID */
                 if (receivedICMPHeader->icmp_type == 0)
@@ -349,6 +345,8 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
                     {
                         /* We got a valid reply. Count it! */
                         pingsReceived++;
+                        sumOfResponseTimesSquared += roundTripTime * roundTripTime;
+                        totalResponseTime += roundTripTime;
                         
                         // TODO remove the +14... it's cheating!
                         /* Get presentation format of source IP */
@@ -807,7 +805,7 @@ int main(int argc, const char** argv)
         while(1) // TODO make this timeout...
         {
             /* If we're excluding some pings, listen but don't print any info */
-            if(excludingPing && pingsSent < pingsToExclude)
+            if(excludingPing && pingsSent <= pingsToExclude)
             {
                 listenICMP(socketDescriptor, &sourceSocket, 1, 1, msecsBetweenReq*2000);
             }
