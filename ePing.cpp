@@ -8,16 +8,17 @@
  this to UDP pinging as well.
  
  Created as a 2013 NDSU Capstone Project with specifications
- and requiremetns provided by Ericsson.
+ and requirements provided by Ericsson.
  
- An extension/reimplementation of the original ping.c.
+ An extension/reimplementation of the original ping.c for the 21st
+ century.
  Emphasis is on readability and ease of understanding the code.
  Inspiration and design inspired by:
  
  Mike Muuss
  U. S. Army Ballistic Research Laboratory
  December, 1983
- Modified at Uc Berkeley
+ Modified at UC Berkeley
  
  */
 
@@ -238,7 +239,6 @@ void report()
     {
         printf("----------------------------------------------------------------\n");
         printf("%d packets sent, %d dropped", pingsSent, (pingsSent - pingsReceived));
-        csvOutput << pingsSent << "," << (pingsSent - pingsReceived) << ",";
         if(excludingPing)
         {
             printf(", %d excluded from summary\n", pingsToExclude);
@@ -248,9 +248,7 @@ void report()
         }
         double average = totalResponseTime / (pingsSent - pingsToExclude);
         printf("Stats avg/stddev : %f / %f\n", average, sqrt((sumOfResponseTimesSquared / (pingsReceived -pingsToExclude)) - (average * average)));
-        printf("-------------------------------------------------------\n");
-        csvOutput << average << "," << sqrt((sumOfResponseTimesSquared / (pingsReceived -pingsToExclude)) - (average * average)) << endl;
-    }
+        printf("-------------------------------------------------------\n");}
 }
 
 /*
@@ -362,14 +360,22 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
                         inet_ntop(AF_INET, &(receivedIPHeader->ip_src), str, INET_ADDRSTRLEN);
                         if(!excludingPings)
                         {
-                            printf("%d bytes from %s packet number:%d  ttl:%d  time:%f ms\n", (bytesReceived+14), str, receivedICMPHeader->icmp_seq, (int)receivedIPHeader->ip_ttl, roundTripTime);
-                            csvOutput << (bytesReceived+14) << "," << str << "," << receivedICMPHeader->icmp_seq << "," << (int)receivedIPHeader->ip_ttl << "," << roundTripTime << endl;
+                            if(quiet) 
+                            {
+								printf(".\n");
+								csvOutput << (bytesReceived+14) << "," << str << "," << receivedICMPHeader->icmp_seq << "," << (int)receivedIPHeader->ip_ttl << "," << roundTripTime << endl;
+							}
+							else
+							{
+								printf("%d bytes from %s packet number:%d  ttl:%d  time:%f ms\n", (bytesReceived+14), str, receivedICMPHeader->icmp_seq, (int)receivedIPHeader->ip_ttl, roundTripTime);
+							}
+                            
                         }
                     }
                 }
                 else
                 {
-                    printf("Not a reply.\n");
+                    printf("Not a reply.\n"); // Should this stay for the Ericsson release?
                 }
             }
             
@@ -717,7 +723,7 @@ int main(int argc, const char** argv)
 		else if(strcmp(argv[i], "-c") == 0)
 		{
 			csvMode = 1;
-			printf("csvMode flag set, things should be quiet from here on out.");
+			printf("Flag -c set! Replies will be output to output.csv.\n");
 		}
 		else
 		{
@@ -798,7 +804,7 @@ int main(int argc, const char** argv)
     
     /* Counting variable */
     int i = 0;
-    csvOutput.open("/tmp/output.csv");
+    csvOutput.open("output.csv");
     
     /* Specify that we want two threads (one for listening, one for sending) */
     omp_set_num_threads(2);
@@ -829,10 +835,14 @@ int main(int argc, const char** argv)
             {
                 listenICMP(socketDescriptor, &sourceSocket, 1, 1, msecsBetweenReq * 2000);
             }
+            else if(csvMode)
+            {
+                listenICMP(socketDescriptor, &sourceSocket, 1, 0, msecsBetweenReq * 2000);
+            }
             else
             {
-                listenICMP(socketDescriptor, &sourceSocket, 0, 0, msecsBetweenReq * 2000);
-            }
+				listenICMP(socketDescriptor, &sourceSocket, 0, 0, msecsBetweenReq * 2000);
+			}
             
             /* Check if we're done listening */
             if(i == pingsToSend-1 || pingsToSend == pingsReceived)
@@ -845,7 +855,6 @@ int main(int argc, const char** argv)
     
     /* Print final statistics and quit */
     report();
-    csvOutput << "End of file";
     csvOutput.close();
 #ifdef WIN32
 	int esult = WSACleanup();
