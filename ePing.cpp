@@ -447,7 +447,8 @@ int main(int argc, const char** argv)
 	bool increasingSize = 0; // -i
     int sizeInitial = 0;
     int sizeGrowth = 0;
-	bool multiplePings = 0;
+	bool multiplePings = 0; // -n
+	bool csvMode = 0; // -c
     // -n
     pingsToSend = 5; // DEFAULT VALUE of 5
 	if(argc-1 == 0)
@@ -457,7 +458,7 @@ int main(int argc, const char** argv)
     }
 	for(int i = 2; i < argc; i++) {
         // argv[0] is the ./a which is input
-        // argv[1] is the IPv4 address, MUST be valid
+        // argv[1] is the address (IPv4, DNS, IPv6\)
 		if(strcmp(argv[i],"-q") == 0)
 		{
 			if(timeBetweenRepReq || randTimeMinMax || randTimeAvgStd)
@@ -709,6 +710,11 @@ int main(int argc, const char** argv)
 			}
 			
 		}
+		else if(strcmp(argv[i], "-c") == 0)
+		{
+			csvMode = 1;
+			printf("csvMode flag set, things should be quiet from here on out.");
+		}
 		else
 		{
 			printf("Flag not recognized, \"%s\"\n",argv[i]);
@@ -788,7 +794,7 @@ int main(int argc, const char** argv)
     
     /* Counting variable */
     int i = 0;
-    // csvOutput.open("output2.csv");
+    csvOutput.open("output2.csv");
     
     /* Specify that we want two threads (one for listening, one for sending) */
     omp_set_num_threads(2);
@@ -833,8 +839,8 @@ int main(int argc, const char** argv)
         
     }
     
-    //csvOutput << "Writing this to a file,";
-    //csvOutput << "Writing that to a file,";
+    csvOutput << "Writing this to a file,";
+    csvOutput << "butts lol,";
     //csvOutput.close();
     
     /* Print final statistics and quit */
