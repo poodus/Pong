@@ -238,6 +238,7 @@ void report()
     {
         printf("----------------------------------------------------------------\n");
         printf("%d packets sent, %d dropped", pingsSent, (pingsSent - pingsReceived));
+        csvOutput << pingsSent << "," << (pingsSent - pingsReceived) << ",";
         if(excludingPing)
         {
             printf(", %d excluded from summary\n", pingsToExclude);
@@ -248,6 +249,7 @@ void report()
         double average = totalResponseTime / (pingsSent - pingsToExclude);
         printf("Stats avg/stddev : %f / %f\n", average, sqrt((sumOfResponseTimesSquared / (pingsReceived -pingsToExclude)) - (average * average)));
         printf("-------------------------------------------------------\n");
+        csvOutput << average << "," << sqrt((sumOfResponseTimesSquared / (pingsReceived -pingsToExclude)) - (average * average)) << endl;
     }
 }
 
@@ -279,6 +281,7 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
 	else if(selectStatus == 0)
 	{
 		printf("I'm tired of waiting. Timeout.\n");
+		csvOutput << "Dropped" << endl;
 	}
 	else
 	{
@@ -360,6 +363,7 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
                         if(!excludingPings)
                         {
                             printf("%d bytes from %s packet number:%d  ttl:%d  time:%f ms\n", (bytesReceived+14), str, receivedICMPHeader->icmp_seq, (int)receivedIPHeader->ip_ttl, roundTripTime);
+                            csvOutput << (bytesReceived+14) << "," << str << "," << receivedICMPHeader->icmp_seq << "," << (int)receivedIPHeader->ip_ttl << "," << roundTripTime << endl;
                         }
                     }
                 }
@@ -448,9 +452,9 @@ int main(int argc, const char** argv)
     int sizeInitial = 0;
     int sizeGrowth = 0;
 	bool multiplePings = 0; // -n
+	pingsToSend = 5; // DEFAULT VALUE of 5
 	bool csvMode = 0; // -c
-    // -n
-    pingsToSend = 5; // DEFAULT VALUE of 5
+
 	if(argc-1 == 0)
     {
         printf("Usage: ePing (IP Address) -n (number of pings) -e (num of pings to exclude from summary)\n");
@@ -794,7 +798,7 @@ int main(int argc, const char** argv)
     
     /* Counting variable */
     int i = 0;
-    csvOutput.open("output2.csv");
+    csvOutput.open("/tmp/output.csv");
     
     /* Specify that we want two threads (one for listening, one for sending) */
     omp_set_num_threads(2);
@@ -839,12 +843,10 @@ int main(int argc, const char** argv)
         
     }
     
-    csvOutput << "Writing this to a file,";
-    csvOutput << "butts lol,";
-    //csvOutput.close();
-    
     /* Print final statistics and quit */
     report();
+    csvOutput << "End of file";
+    csvOutput.close();
 #ifdef WIN32
 	int esult = WSACleanup();
 #endif
