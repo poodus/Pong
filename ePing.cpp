@@ -237,7 +237,7 @@ void report()
     if(pingsSent != 0)
     {
         printf("----------------------------------------------------------------\n");
-        printf("%d packets sent, %d dropped", (pingsSent), (pingsSent-pingsToExclude)-pingsReceived);
+        printf("%d packets sent, %d dropped", (pingsSent), (pingsSent-pingsToExclude)- (pingsReceived-pingsToExclude));
         if(excludingPing)
         {
             printf(", %d excluded from summary\n", pingsToExclude);
@@ -246,7 +246,7 @@ void report()
             printf("\n");
         }
         double average = totalResponseTime/(pingsSent-pingsToExclude);
-        printf("Stats avg/stddev : %f / %f\n", average, sqrt((sumOfResponseTimesSquared / pingsReceived) - (average * average)));
+        printf("Stats avg/stddev : %f / %f\n", average, sqrt((sumOfResponseTimesSquared / (pingsReceived-pingsToExclude)) - (average * average)));
         printf("-------------------------------------------------------\n");
     }
 }
@@ -288,8 +288,7 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
             /* Receive the data */
 			ssize_t bytesReceived = recvfrom(socketDescriptor, receivedPacketBuffer, sizeof(receivedPacketBuffer), 0, (struct sockaddr *)&fromWhom, &fromWhomLength);
             
-            if(!excludingPings)
-            {
+
                 /* Format the received data into the IP struct, then shift bits */
                 struct ip * receivedIPHeader = (struct ip *) receivedPacketBuffer;
                 int headerLength = receivedIPHeader->ip_hl << 2;
@@ -297,8 +296,7 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
                 /* Format the received data into the ICMP struct */
                 receivedICMPHeader = (struct icmp *)(receivedPacketBuffer + headerLength);
                 
-                if(!quiet)
-                {
+
                     
                     /* Get the time */
 #if __MACH__
@@ -311,8 +309,7 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
                         --receivedTime.tv_sec;
                         receivedTime.tv_nsec += 1000000000;
                     }
-                    receivedTime.tv_sec -= sentTime->tv_sec;
-                    roundTripTime = receivedTime.tv_sec * 1000.0 + receivedTime.tv_nsec / 1000000.0;
+                    
                     
 #elif __WINDOWS__
                     //  GetTick64Count()
@@ -326,10 +323,8 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
                         --receivedTime2.tv_sec;
                         receivedTime2.tv_nsec += 1000000000;
                     }
-                    receivedTime2.tv_sec -= sentTime2->tv_sec;
-                    roundTripTime = receivedTime2.tv_sec * 1000.0 + receivedTime2.tv_nsec / 1000000.0;
+                    
 #endif
-                }
                 
                 /* Check if the packet was an ECHO_REPLY, and if it was meant for our computer using the ICMP id,
                  which we set to the process ID */
@@ -345,14 +340,27 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
                     {
                         /* We got a valid reply. Count it! */
                         pingsReceived++;
-                        sumOfResponseTimesSquared += roundTripTime * roundTripTime;
-                        totalResponseTime += roundTripTime;
+                        if(!excludingPings)
+                        {
+#if __MACH__
+                            receivedTime.tv_sec -= sentTime->tv_sec;
+                            roundTripTime = receivedTime.tv_sec * 1000.0 + receivedTime.tv_nsec / 1000000.0;
+#elif __GNUC__
+                            receivedTime2.tv_sec -= sentTime2->tv_sec;
+                            roundTripTime = receivedTime2.tv_sec * 1000.0 + receivedTime2.tv_nsec / 1000000.0;
+#endif
+                            sumOfResponseTimesSquared += roundTripTime * roundTripTime;
+                            totalResponseTime += roundTripTime;
+                        }
                         
                         // TODO remove the +14... it's cheating!
                         /* Get presentation format of source IP */
                         char str[INET_ADDRSTRLEN];
                         inet_ntop(AF_INET, &(receivedIPHeader->ip_src), str, INET_ADDRSTRLEN);
-                        printf("%d bytes from %s packet number:%d  ttl:%d  time:%f ms\n", (bytesReceived+14), str, receivedICMPHeader->icmp_seq, (int)receivedIPHeader->ip_ttl, roundTripTime);
+                        if(!excludingPings)
+                        {
+                            printf("%d bytes from %s packet number:%d  ttl:%d  time:%f ms\n", (bytesReceived+14), str, receivedICMPHeader->icmp_seq, (int)receivedIPHeader->ip_ttl, roundTripTime);
+                        }
                     }
                 }
                 else
@@ -361,7 +369,7 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
                 }
             }
             
-		}
+		
 	}
 }
 
@@ -804,8 +812,9 @@ int main(int argc, const char** argv)
 #pragma omp section
         while(1) // TODO make this timeout...
         {
+
             /* If we're excluding some pings, listen but don't print any info */
-            if(excludingPing && pingsSent <= pingsToExclude)
+            if(excludingPing && pingsReceived < pingsToExclude)
             {
                 listenICMP(socketDescriptor, &sourceSocket, 1, 1, msecsBetweenReq * 2000);
             }
