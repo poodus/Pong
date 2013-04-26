@@ -10,7 +10,7 @@ Developed as a NDSU Capstone Project, Spring 2013
 
 # CONTRIBUTORS
 
-- [Chris Berstler](https://github.com/drsir) - Christopher.Berstler {at} my.ndsu.edu
-- [Jeff Geiser](https://github.com/jrgeiser) - Jeffery.Geiser {at} my.ndsu.edu
-- [Shane Reetz](https://github.com/poodus) - Shane.Reetz {at} my.ndsu.edu
-- [Sam Stutsman](https://github.com/TheIronMarx) - Samuel.Stutsman {at} my.ndsu.edu
+- [Chris Berstler](https://github.com/drsir) - Christopher.Berstler my.ndsu.edu
+- [Jeff Geiser](https://github.com/jrgeiser) - Jeffery.Geiser my.ndsu.edu
+- [Shane Reetz](https://github.com/poodus) - Shane.Reetz my.ndsu.edu
+- [Sam Stutsman](https://github.com/TheIronMarx) - Samuel.Stutsman my.ndsu.edu
