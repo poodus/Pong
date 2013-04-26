@@ -209,7 +209,7 @@ void pingICMP(int socketDescriptor, int icmpPayloadLength)
 	icmpHeader->icmp_cksum = checksum((u_short *)icmpHeader, sizeof(*icmpHeader));
     
 	/* Try to send the packet */
-	sent = sendto(socketDescriptor, packet, icmpPayloadLength+8, 0, (struct sockaddr *)whereto, sizeof(struct sockaddr));
+	sent = sendto(socketDescriptor, packet, icmpPayloadLength + 8, 0, (struct sockaddr *)whereto, sizeof(struct sockaddr));
     
     /* Check if the packet sent or not */
 	if(sent > 0)
@@ -266,7 +266,7 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
 	fd_set readfds;
 	FD_SET(socketDescriptor, &readfds);
 	struct timeval timeout;
-	timeout.tv_sec = 2; // timeout period, seconds (added second, if that matters)
+	timeout.tv_sec = 4; // timeout period, seconds (added second, if that matters)
     //printf("Timeout length")
 	timeout.tv_usec = 0; // timeuot period, microseconds 1,000,000 micro = second
     // TODO Make this timeout dependent on how many pings have been sent...
@@ -466,10 +466,10 @@ int main(int argc, const char** argv)
 			}
 			else
 			{
-				if(i + 1 < argc && atoi(argv[i+1]) > 0)
+				if(i + 1 < argc && atoi(argv[i + 1]) > 0)
 				{
 					timeBetweenReq = true;
-					msecsBetweenReq = atoi(argv[i+1]);
+					msecsBetweenReq = atoi(argv[i + 1]);
 					printf("Flag -q set! Waiting %f milliseconds between ping requests.\n", msecsBetweenReq);
 					i++;
 				}
@@ -487,10 +487,10 @@ int main(int argc, const char** argv)
 			}
 			else
 			{
-				if(i + 1 < argc && atoi(argv[i+1]) > 0)
+				if(i + 1 < argc && atoi(argv[i + 1]) > 0)
 				{
 					timeBetweenRepReq = true;
-					msecsBetweenRepReq = atoi(argv[i+1]);
+					msecsBetweenRepReq = atoi(argv[i + 1]);
 					printf("Flag -b set! Waiting %d milliseconds between receiving a reply and sending a request\n", msecsBetweenRepReq);
 					i++;
 				}
@@ -508,10 +508,10 @@ int main(int argc, const char** argv)
 			}
 			else
 			{
-				if(i + 1 < argc && atoi(argv[i+1]) > 0)
+				if(i + 1 < argc && atoi(argv[i + 1]) > 0)
 				{
 					//datagramSize = true;
-					bytesDatagram = atoi(argv[i+1]);
+					bytesDatagram = atoi(argv[i + 1]);
 					printf("Flag -d set! Datagram will be %d bytes large.\n", bytesDatagram);
 					i++;
 				}
@@ -529,10 +529,10 @@ int main(int argc, const char** argv)
 			}
 			else
 			{
-				if(i + 1 < argc && atoi(argv[i+1]) > 0)
+				if(i + 1 < argc && atoi(argv[i + 1]) > 0)
 				{
 					payloadSize = true;
-					bytesPayload = atoi(argv[i+1]);
+					bytesPayload = atoi(argv[i + 1]);
 					printf("Flag -p set! Payload size will be %d bytes large.\n", bytesPayload);
 					i++;
 				}
@@ -550,18 +550,18 @@ int main(int argc, const char** argv)
 			}
 			else
 			{
-				if(i + 2 < argc && atoi(argv[i+2]) > 0)
+				if(i + 2 < argc && atoi(argv[i + 2]) > 0)
 				{
 					randSizeMinMax = true;
-					if(atoi(argv[i+1]) > atoi(argv[i+2]))
+					if(atoi(argv[i + 1]) > atoi(argv[i + 2]))
 					{
-						bytesSizeMin = atoi(argv[i+2]);
-						bytesSizeMax = atoi(argv[i+1]);
+						bytesSizeMin = atoi(argv[i + 2]);
+						bytesSizeMax = atoi(argv[i + 1]);
 					}
 					else
 					{
-						bytesSizeMin = atoi(argv[i+1]);
-						bytesSizeMax = atoi(argv[i+2]);
+						bytesSizeMin = atoi(argv[i + 1]);
+						bytesSizeMax = atoi(argv[i + 2]);
 					}
 					printf("Flag -l set! Random size will be between %d ", bytesSizeMin);
 					printf("and %d.\n", bytesSizeMax);
@@ -581,11 +581,11 @@ int main(int argc, const char** argv)
 			}
 			else
 			{
-				if(i + 2 < argc && atoi(argv[i+2]) > 0)
+				if(i + 2 < argc && atoi(argv[i + 2]) > 0)
 				{
 					randSizeAvgStd = true;
-					bytesSizeAvg = atoi(argv[i+1]);
-					bytesSizeStd = atoi(argv[i+2]);
+					bytesSizeAvg = atoi(argv[i + 1]);
+					bytesSizeStd = atoi(argv[i + 2]);
 					printf("Flag -r set! Random size will average %d",bytesSizeAvg);
 					printf(" with a std. dev. of %d.\n", bytesSizeStd);
 					i += 2;
@@ -604,18 +604,18 @@ int main(int argc, const char** argv)
 			}
 			else
 			{
-				if(i + 2 < argc && atoi(argv[i+2]) > 0)
+				if(i + 2 < argc && atoi(argv[i + 2]) > 0)
 				{
 					randTimeMinMax = true;
-					if(atoi(argv[i+1]) > atoi(argv[i+2]))
+					if(atoi(argv[i + 1]) > atoi(argv[i + 2]))
 					{
-						msecsTimeMin = atoi(argv[i+2]);
-						msecsTimeMax = atoi(argv[i+1]);
+						msecsTimeMin = atoi(argv[i + 2]);
+						msecsTimeMax = atoi(argv[i + 1]);
 					}
 					else
 					{
-						msecsTimeMin = atoi(argv[i+1]);
-						msecsTimeMax = atoi(argv[i+2]);
+						msecsTimeMin = atoi(argv[i + 1]);
+						msecsTimeMax = atoi(argv[i + 2]);
 					}
 					printf("Flag -s set! Random time between requests will be between %d ", msecsTimeMin);
 					printf("and %d.\n", msecsTimeMax);
@@ -635,11 +635,11 @@ int main(int argc, const char** argv)
 			}
 			else
 			{
-				if(i + 2 < argc && atoi(argv[i+2]) > 0)
+				if(i + 2 < argc && atoi(argv[i + 2]) > 0)
 				{
 					randTimeAvgStd = true;
-					msecsTimeAvg = atoi(argv[i+1]);
-					msecsTimeStd = atoi(argv[i+2]);
+					msecsTimeAvg = atoi(argv[i + 1]);
+					msecsTimeStd = atoi(argv[i + 2]);
 					printf("Flag -t set! Random time between requests will average %d ",msecsTimeAvg);
 					printf("with a std. dev. of %d.\n", msecsTimeStd);
 					i += 2;
@@ -658,11 +658,11 @@ int main(int argc, const char** argv)
 			}
 			else
 			{
-				if(i + 2 < argc && atoi(argv[i+2]) > 0)
+				if(i + 2 < argc && atoi(argv[i + 2]) > 0)
 				{
 					increasingSize = true;
-					sizeInitial = atoi(argv[i+1]);
-					sizeGrowth = atoi(argv[i+2]);
+					sizeInitial = atoi(argv[i + 1]);
+					sizeGrowth = atoi(argv[i + 2]);
 					printf("Flag -i set! Pings will have an initial size of %d ", sizeInitial);
 					printf("and grow at a rate of %d per request.\n", sizeGrowth);
 					i += 2;
@@ -675,10 +675,10 @@ int main(int argc, const char** argv)
 		}
 		else if(strcmp(argv[i],"-e") == 0)
 		{
-			if(i + 1 < argc && atoi(argv[i+1]) > 0)
+			if(i + 1 < argc && atoi(argv[i + 1]) > 0)
 			{
 				excludingPing = true;
-				pingsToExclude = atoi(argv[i+1]);
+				pingsToExclude = atoi(argv[i + 1]);
                 if(pingsToExclude >= pingsToSend)
                 {
                     printf("Trying to exclude more pings than you send huh? Not funny.\n");
@@ -695,7 +695,7 @@ int main(int argc, const char** argv)
 		}
 		else if(strcmp(argv[i],"-n") == 0)
 		{
-			if(i + 1 < argc && atoi(argv[i+1]) > 0)
+			if(i + 1 < argc && atoi(argv[i + 1]) > 0)
 			{
 				multiplePings = true;
 				pingsToSend = atoi(argv[i + 1]);
@@ -721,6 +721,7 @@ int main(int argc, const char** argv)
     hints.ai_socktype = SOCK_RAW; /* RAW socket */
     hints.ai_flags = AI_PASSIVE;  /* Fill in my IP address */
     int status;
+    
     /* Convert address */
     if((status = getaddrinfo(destination, NULL, &hints, &result)) != 0)
     {
@@ -812,7 +813,7 @@ int main(int argc, const char** argv)
 #pragma omp section
         while(1) // TODO make this timeout...
         {
-
+            
             /* If we're excluding some pings, listen but don't print any info */
             if(excludingPing && pingsReceived < pingsToExclude)
             {
@@ -824,7 +825,7 @@ int main(int argc, const char** argv)
             }
             
             /* Check if we're done listening */
-            if(i == pingsToSend-1)
+            if(i == pingsToSend-1 || pingsToSend == pingsReceived)
             {
                 break;
             }
