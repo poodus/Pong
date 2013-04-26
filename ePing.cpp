@@ -238,7 +238,8 @@ void report()
     if(pingsSent != 0)
     {
         printf("----------------------------------------------------------------\n");
-        printf("%d packets sent, %d dropped", pingsSent, (pingsSent - pingsReceived));
+        //printf("%d packets sent, %d dropped", pingsSent, (pingsSent - pingsReceived));
+        printf("(%d of %d) packets received", pingsReceived, pingsSent);
         if(excludingPing)
         {
             printf(", %d excluded from summary\n", pingsToExclude);
