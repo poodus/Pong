@@ -237,7 +237,7 @@ void report()
     if(pingsSent != 0)
     {
         printf("----------------------------------------------------------------\n");
-        printf("%d packets sent, %d dropped", (pingsSent), (pingsSent-pingsToExclude)- (pingsReceived-pingsToExclude));
+        printf("%d packets sent, %d dropped", pingsSent, (pingsSent - pingsReceived));
         if(excludingPing)
         {
             printf(", %d excluded from summary\n", pingsToExclude);
@@ -245,8 +245,8 @@ void report()
         else{
             printf("\n");
         }
-        double average = totalResponseTime/(pingsSent-pingsToExclude);
-        printf("Stats avg/stddev : %f / %f\n", average, sqrt((sumOfResponseTimesSquared / (pingsReceived-pingsToExclude)) - (average * average)));
+        double average = totalResponseTime / (pingsSent - pingsToExclude);
+        printf("Stats avg/stddev : %f / %f\n", average, sqrt((sumOfResponseTimesSquared / (pingsReceived -pingsToExclude)) - (average * average)));
         printf("-------------------------------------------------------\n");
     }
 }
