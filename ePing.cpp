@@ -471,7 +471,7 @@ int main(int argc, const char** argv)
     }
 	for(int i = 2; i < argc; i++) {
         // argv[0] is the ./a which is input
-        // argv[1] is the address (IPv4, DNS, IPv6\)
+        // argv[1] is the address (IPv4, DNS, IPv6)
 		if(strcmp(argv[i],"-q") == 0)
 		{
 			if(timeBetweenRepReq || randTimeMinMax || randTimeAvgStd)
@@ -524,7 +524,7 @@ int main(int argc, const char** argv)
 			{
 				if(i + 1 < argc && atoi(argv[i + 1]) > 0)
 				{
-					//datagramSizeSet = true;
+					datagramSizeSet = true;
                     // icmpPayloadLength = bytesDatagram - everything else in the packet
 					icmpPayloadLength = atoi(argv[i + 1]) - ICMP_MINLEN - IP_MINLENGTH;
 					printf("Flag -d set! Datagram will be %d bytes large.\n", icmpPayloadLength+IP_MINLENGTH+ICMP_MINLEN);
@@ -845,8 +845,8 @@ int main(int argc, const char** argv)
             }
             else
             {
-				listenICMP(socketDescriptor, &sourceSocket, 0, 0, msecsBetweenReq * 2000);
-			}
+		listenICMP(socketDescriptor, &sourceSocket, 0, 0, msecsBetweenReq * 2000);
+	    }
             
             /* Check if we're done listening */
             if(i == pingsToSend-1 || pingsToSend == pingsReceived)
