@@ -29,6 +29,8 @@
  Imports
  
  */
+#define IP_MINLENGTH 34
+#define ICMP_MINLENGTH 16
 #include <omp.h>
 #include <math.h>
 #include <iostream>
@@ -441,10 +443,8 @@ int main(int argc, const char** argv)
     float msecsBetweenReq = 1000;
 	bool timeBetweenRepReq = 0; // -b
     int msecsBetweenRepReq = 0;
-	bool datagramSize = 0; // -d
-    int bytesDatagram = 0;
+	bool datagramSizeSet = 0; // -d
 	bool payloadSize = 0; // -p
-    int bytesPayload = 0;
 	bool randSizeMinMax = 0; // -l
     int bytesSizeMin = 0;
     int bytesSizeMax = 0;
@@ -524,9 +524,10 @@ int main(int argc, const char** argv)
 			{
 				if(i + 1 < argc && atoi(argv[i + 1]) > 0)
 				{
-					//datagramSize = true;
-					bytesDatagram = atoi(argv[i + 1]);
-					printf("Flag -d set! Datagram will be %d bytes large.\n", bytesDatagram);
+					//datagramSizeSet = true;
+                    // icmpPayloadLength = bytesDatagram - everything else in the packet
+					icmpPayloadLength = atoi(argv[i + 1]) - ICMP_MINLEN - IP_MINLENGTH;
+					printf("Flag -d set! Datagram will be %d bytes large.\n", icmpPayloadLength+IP_MINLENGTH+ICMP_MINLEN);
 					i++;
 				}
 				else
@@ -537,7 +538,7 @@ int main(int argc, const char** argv)
 		}
 		else if(strcmp(argv[i],"-p") == 0)
 		{
-			if(datagramSize || randSizeMinMax || randSizeAvgStd)
+			if(datagramSizeSet || randSizeMinMax || randSizeAvgStd)
 			{
 				printf("-p flag not set, conflicting with previously set flag.\n");
 			}
@@ -546,8 +547,8 @@ int main(int argc, const char** argv)
 				if(i + 1 < argc && atoi(argv[i + 1]) > 0)
 				{
 					payloadSize = true;
-					bytesPayload = atoi(argv[i + 1]);
-					printf("Flag -p set! Payload size will be %d bytes large.\n", bytesPayload);
+					icmpPayloadLength = atoi(argv[i + 1]);
+					printf("Flag -p set! Payload size will be %d bytes large.\n", icmpPayloadLength);
 					i++;
 				}
 				else
@@ -558,7 +559,7 @@ int main(int argc, const char** argv)
 		}
 		else if(strcmp(argv[i],"-l") == 0)
 		{
-			if(datagramSize || payloadSize || increasingSize || randSizeAvgStd)
+			if(datagramSizeSet || payloadSize || increasingSize || randSizeAvgStd)
 			{
 				printf("-l flag not set, conflicting with previously set flag.\n");
 			}
@@ -589,7 +590,7 @@ int main(int argc, const char** argv)
 		}
 		else if(strcmp(argv[i],"-r") == 0)
 		{
-			if(datagramSize || payloadSize || increasingSize || randSizeMinMax)
+			if(datagramSizeSet || payloadSize || increasingSize || randSizeMinMax)
 			{
 				printf("-r flag not set, conflicting with previously set flag.\n");
 			}
@@ -666,7 +667,7 @@ int main(int argc, const char** argv)
 		}
 		else if(strcmp(argv[i],"-i") == 0)
 		{
-			if(datagramSize || payloadSize || randSizeMinMax || randSizeAvgStd)
+			if(datagramSizeSet || payloadSize || randSizeMinMax || randSizeAvgStd)
 			{
 				printf("-i flag not set, conflicting with previously set flag.\n");
 			}
