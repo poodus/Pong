@@ -247,7 +247,7 @@ void report()
         }
         double average = totalResponseTime / (pingsSent - pingsToExclude);
         printf("Stats avg/stddev : %f / %f\n", average, sqrt((sumOfResponseTimesSquared / (pingsReceived -pingsToExclude)) - (average * average)));
-        printf("-------------------------------------------------------\n");
+        printf("----------------------------------------------------------------\n");
     }
 }
 
@@ -340,6 +340,8 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
                     {
                         /* We got a valid reply. Count it! */
                         pingsReceived++;
+                        
+                        /* Calculate round trip time */
                         if(!excludingPings)
                         {
 #if __MACH__
@@ -353,7 +355,7 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
                             totalResponseTime += roundTripTime;
                         }
                         
-                        // TODO remove the +14... it's cheating!
+                        // TODO remove the +14...
                         /* Get presentation format of source IP */
                         char str[INET_ADDRSTRLEN];
                         inet_ntop(AF_INET, &(receivedIPHeader->ip_src), str, INET_ADDRSTRLEN);
@@ -839,9 +841,10 @@ int main(int argc, const char** argv)
         
     }
     
+    /* This is just for testing */
     csvOutput << "Writing this to a file,";
-    csvOutput << "butts lol,";
-    //csvOutput.close();
+    csvOutput << "wrintg,";
+    csvOutput.close();
     
     /* Print final statistics and quit */
     report();
