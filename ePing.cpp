@@ -8,16 +8,17 @@
  this to UDP pinging as well.
  
  Created as a 2013 NDSU Capstone Project with specifications
- and requiremetns provided by Ericsson.
+ and requirements provided by Ericsson.
  
- An extension/reimplementation of the original ping.c.
+ An extension/reimplementation of the original ping.c for the 21st
+ century.
  Emphasis is on readability and ease of understanding the code.
  Inspiration and design inspired by:
  
  Mike Muuss
  U. S. Army Ballistic Research Laboratory
  December, 1983
- Modified at Uc Berkeley
+ Modified at UC Berkeley
  
  */
 
@@ -279,6 +280,7 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
 	else if(selectStatus == 0)
 	{
 		printf("I'm tired of waiting. Timeout.\n");
+		csvOutput << "Dropped" << endl;
 	}
 	else
 	{
@@ -361,13 +363,22 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
                         inet_ntop(AF_INET, &(receivedIPHeader->ip_src), str, INET_ADDRSTRLEN);
                         if(!excludingPings)
                         {
-                            printf("%d bytes from %s packet number:%d  ttl:%d  time:%f ms\n", (bytesReceived+14), str, receivedICMPHeader->icmp_seq, (int)receivedIPHeader->ip_ttl, roundTripTime);
+                            if(quiet) 
+                            {
+								printf(".\n");
+								csvOutput << (bytesReceived+14) << "," << str << "," << receivedICMPHeader->icmp_seq << "," << (int)receivedIPHeader->ip_ttl << "," << roundTripTime << endl;
+							}
+							else
+							{
+								printf("%d bytes from %s packet number:%d  ttl:%d  time:%f ms\n", (bytesReceived+14), str, receivedICMPHeader->icmp_seq, (int)receivedIPHeader->ip_ttl, roundTripTime);
+							}
+                            
                         }
                     }
                 }
                 else
                 {
-                    printf("Not a reply.\n");
+                    printf("Not a reply.\n"); // Should this stay for the Ericsson release?
                 }
             }
             
@@ -450,9 +461,9 @@ int main(int argc, const char** argv)
     int sizeInitial = 0;
     int sizeGrowth = 0;
 	bool multiplePings = 0; // -n
+	pingsToSend = 5; // DEFAULT VALUE of 5
 	bool csvMode = 0; // -c
-    // -n
-    pingsToSend = 5; // DEFAULT VALUE of 5
+
 	if(argc-1 == 0)
     {
         printf("Usage: ePing (IP Address) -n (number of pings) -e (num of pings to exclude from summary)\n");
@@ -715,7 +726,7 @@ int main(int argc, const char** argv)
 		else if(strcmp(argv[i], "-c") == 0)
 		{
 			csvMode = 1;
-			printf("csvMode flag set, things should be quiet from here on out.");
+			printf("Flag -c set! Replies will be output to output.csv.\n");
 		}
 		else
 		{
@@ -796,7 +807,7 @@ int main(int argc, const char** argv)
     
     /* Counting variable */
     int i = 0;
-    csvOutput.open("output2.csv");
+    csvOutput.open("output.csv");
     
     /* Specify that we want two threads (one for listening, one for sending) */
     omp_set_num_threads(2);
@@ -827,10 +838,14 @@ int main(int argc, const char** argv)
             {
                 listenICMP(socketDescriptor, &sourceSocket, 1, 1, msecsBetweenReq * 2000);
             }
+            else if(csvMode)
+            {
+                listenICMP(socketDescriptor, &sourceSocket, 1, 0, msecsBetweenReq * 2000);
+            }
             else
             {
-                listenICMP(socketDescriptor, &sourceSocket, 0, 0, msecsBetweenReq * 2000);
-            }
+				listenICMP(socketDescriptor, &sourceSocket, 0, 0, msecsBetweenReq * 2000);
+			}
             
             /* Check if we're done listening */
             if(i == pingsToSend-1 || pingsToSend == pingsReceived)
@@ -841,13 +856,9 @@ int main(int argc, const char** argv)
         
     }
     
-    /* This is just for testing */
-    csvOutput << "Writing this to a file,";
-    csvOutput << "wrintg,";
-    csvOutput.close();
-    
     /* Print final statistics and quit */
     report();
+    csvOutput.close();
 #ifdef WIN32
 	int esult = WSACleanup();
 #endif
