@@ -696,7 +696,7 @@ int main(int argc, const char** argv)
 						
 						//Subtract growth from initial once so when we ping, we can add sizeGrowth to it every time,
 						//and initialGrowth is still proper
-						icmpPayloadLength = sizeInitial - sizeGrowth;
+						icmpPayloadLength = sizeInitial - sizeGrowth - IP_MINLENGTH - ICMP_MINLENGTH;
 					}
 					else
 					{
