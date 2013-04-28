@@ -524,8 +524,13 @@ int main(int argc, const char** argv)
 				if(i + 1 < argc && atoi(argv[i + 1]) > 0)
 				{
 					datagramSizeSet = true;
-                    // icmpPayloadLength = bytesDatagram - everything else in the packet
 					icmpPayloadLength = atoi(argv[i + 1]) - ICMP_MINLEN - IP_MINLENGTH;
+                    if(icmpPayloadLength < 8)
+                    {
+                        printf("Error: datagram size must be greater than 50 bytes.\n");
+                        printf("----------------------------------------------------------------\n");
+                        return(1);
+                    }
 					printf("Flag -d set! Datagram will be %d bytes large.\n", icmpPayloadLength+IP_MINLENGTH+ICMP_MINLEN);
 					i++;
 				}
@@ -543,10 +548,16 @@ int main(int argc, const char** argv)
 			}
 			else
 			{
-				if(i + 1 < argc && atoi(argv[i + 1]) > 0)
+				if(i + 1 < argc && atoi(argv[i + 1]) >= 0)
 				{
 					payloadSize = true;
 					icmpPayloadLength = atoi(argv[i + 1]);
+                    if(icmpPayloadLength < 8)
+                    {
+                        printf("Error: Payload size must be 8 bytes or greater.\n");
+                        printf("----------------------------------------------------------------\n");
+                        return(1);
+                    }
 					printf("Flag -p set! Payload size will be %d bytes large.\n", icmpPayloadLength);
 					i++;
 				}
