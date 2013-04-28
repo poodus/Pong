@@ -429,7 +429,6 @@ int main(int argc, const char** argv)
 	if(result != 0) {
         printf("WSAStartup failed with error: %d\n", wsaData);
         return 1;
-    }
 #endif
 	printf("----------------------------------------------------------------\n");
     
@@ -849,7 +848,7 @@ int main(int argc, const char** argv)
 	    }
             
             /* Check if we're done listening */
-            if(i == pingsToSend-1 || pingsToSend == pingsReceived)
+            if(i == pingsToSend - 1 || pingsToSend == pingsReceived)
             {
                 break;
             }
