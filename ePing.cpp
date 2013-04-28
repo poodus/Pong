@@ -834,11 +834,14 @@ int main(int argc, const char** argv)
     int i = 0;
     csvOutput.open("output.csv");
         
-    //Bytes size avg
-    double randomPacketSize;
+    /* Variables and generators for random size/time */
+    double randomDatagramSize;
+    double randomTime;
 
     std::default_random_engine generator;
     std::normal_distribution<double> distribution(bytesSizeAvg, bytesSizeStd);
+    std::normal_distribution<double> distribution2(msecsTimeAvg, msecsTimeStd);
+        
 
     /* Specify that we want two threads (one for listening, one for sending) */
     omp_set_num_threads(2);
@@ -855,10 +858,11 @@ int main(int argc, const char** argv)
 #pragma omp section
         for (i = 0; i < pingsToSend; i++)
         {
+            /* Ping */
             if(randSizeAvgStd)
             {
-                randomPacketSize = distribution(generator);
-                pingICMP(socketDescriptor, randomPacketSize-IP_MINLENGTH-ICMP_MINLEN);
+                randomDatagramSize = distribution(generator);
+                pingICMP(socketDescriptor, randomDatagramSize-IP_MINLENGTH-ICMP_MINLEN);
             }
             if(increasingSize)
 			{
@@ -870,7 +874,16 @@ int main(int argc, const char** argv)
                 pingICMP(socketDescriptor, icmpPayloadLength);
             }
             
-            usleep(msecsBetweenReq * 1000);
+            /* Wait */
+            if(randTimeAvgStd)
+            {
+                randomTime = distribution2(generator);
+                usleep(randomTime * 1000);
+            }
+            else
+            {
+                usleep(msecsBetweenReq * 1000);
+            }
         }
         
         /* Listen block */
