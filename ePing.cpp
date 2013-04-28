@@ -694,8 +694,8 @@ int main(int argc, const char** argv)
 						printf("Flag -i set! Pings will have an initial size of %d ", sizeInitial);
 						printf("and grow at a rate of %d per request.\n", sizeGrowth);
 						
-						//Subtract growth from initial once so when we ping, we can add sizeGrowth to it every time,
-						//and initialGrowth is still proper
+						/*Subtract growth from initial once so when we ping, we can add sizeGrowth to it every time,
+                        and initialGrowth is still proper */
 						icmpPayloadLength = sizeInitial - sizeGrowth;
 					}
 					else
