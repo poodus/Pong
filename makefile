@@ -1,3 +1,3 @@
 ePing: ePing.cpp
-	g++ ePing.cpp -fopenmp -o ePing.out
+	g++ -std=c++0x ePing.cpp -fopenmp -o ePing.out
 

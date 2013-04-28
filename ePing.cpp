@@ -34,6 +34,7 @@
 #include <omp.h>
 #include <math.h>
 #include <iostream>
+#include <random>
 #include <fstream>
 #include <sys/param.h>
 #include <sys/file.h>
@@ -249,7 +250,7 @@ void report()
             printf("\n");
         }
         double average = totalResponseTime / (pingsSent - pingsToExclude);
-        printf("Stats avg/stddev : %f / %f\n", average, sqrt((sumOfResponseTimesSquared / (pingsReceived -pingsToExclude)) - (average * average)));
+        printf("Stats avg/stddev : %f / %f\n", average, sqrt((sumOfResponseTimesSquared / (pingsReceived - pingsToExclude)) - (average * average)));
         printf("----------------------------------------------------------------\n");
     }
 }
@@ -756,6 +757,7 @@ int main(int argc, const char** argv)
     if((status = getaddrinfo(destination, NULL, &hints, &result)) != 0)
     {
         printf("getaddrinfo error: %s\n", gai_strerror(status));
+        printf("Double check the address that you want to ping.\n");
         exit(1);
     }
     
@@ -819,7 +821,13 @@ int main(int argc, const char** argv)
     /* Counting variable */
     int i = 0;
     csvOutput.open("output.csv");
-    
+        
+    //Bytes size avg
+    double randomPacketSize;
+
+    std::default_random_engine generator;
+    std::normal_distribution<double> distribution(bytesSizeAvg, bytesSizeStd);
+
     /* Specify that we want two threads (one for listening, one for sending) */
     omp_set_num_threads(2);
     
@@ -835,7 +843,16 @@ int main(int argc, const char** argv)
 #pragma omp section
         for (i = 0; i < pingsToSend; i++)
         {
-            pingICMP(socketDescriptor, icmpPayloadLength);
+            if(randSizeAvgStd)
+            {
+                randomPacketSize = distribution(generator);
+                pingICMP(socketDescriptor, randomPacketSize-IP_MINLENGTH-ICMP_MINLEN);
+            }
+            else
+            {
+                pingICMP(socketDescriptor, icmpPayloadLength);
+            }
+            
             usleep(msecsBetweenReq * 1000);
         }
         
