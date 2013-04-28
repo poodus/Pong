@@ -458,9 +458,9 @@ int main(int argc, const char** argv)
     int msecsTimeAvg = 0;
     int msecsTimeStd = 0;
 	bool increasingSize = 0; // -i // --increasing-size
-	excludingPing = 0; // -e // --exclude
-    int sizeInitial = 0;
+    int sizeInitial = 0; // Must be greater than or equal to (IP_MINLENGTH + ICMP_MINLENGTH)
     int sizeGrowth = 0;
+    excludingPing = 0; // -e // --exclud
 	bool multiplePings = 0; // -n // --ping-count
 	pingsToSend = 5; // DEFAULT VALUE of 5
 	bool csvMode = 0; // -c // --csv
@@ -689,8 +689,20 @@ int main(int argc, const char** argv)
 					increasingSize = true;
 					sizeInitial = atoi(argv[i + 1]);
 					sizeGrowth = atoi(argv[i + 2]);
-					printf("Flag -i set! Pings will have an initial size of %d ", sizeInitial);
-					printf("and grow at a rate of %d per request.\n", sizeGrowth);
+					if(sizeInitial >= (IP_MINLENGTH + ICMP_MINLENGTH))
+					{
+						printf("Flag -i set! Pings will have an initial size of %d ", sizeInitial);
+						printf("and grow at a rate of %d per request.\n", sizeGrowth);
+						
+						//Subtract growth from initial once so when we ping, we can add sizeGrowth to it every time,
+						//and initialGrowth is still proper
+						sizeInitial -= sizeGrowth;
+					}
+					else
+					{
+						printf("Problem: Initial size must be greater than IP header size plus the ICMP header size (%d).\n", IP_MINLENGTH + ICMP_MINLENGTH);
+						return(1);
+					}
 					i += 2;
 				}
 				else
@@ -848,6 +860,11 @@ int main(int argc, const char** argv)
                 randomPacketSize = distribution(generator);
                 pingICMP(socketDescriptor, randomPacketSize-IP_MINLENGTH-ICMP_MINLEN);
             }
+            if(increasingSize)
+			{
+				icmpPayloadLength += sizeGrowth;
+				pingICMP(socketDescriptor, icmpPayloadLength);
+			}
             else
             {
                 pingICMP(socketDescriptor, icmpPayloadLength);
