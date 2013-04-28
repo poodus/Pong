@@ -439,32 +439,32 @@ int main(int argc, const char** argv)
      
      */
 	const char* destination = argv[1];
-	bool timeBetweenReq = 0; // -q
+	bool timeBetweenReq = 0; // -q // --request-time
     float msecsBetweenReq = 1000;
-	bool timeBetweenRepReq = 0; // -b
+	bool timeBetweenRepReq = 0; // -b // --reply-request-time
     int msecsBetweenRepReq = 0;
-	bool datagramSizeSet = 0; // -d
-	bool payloadSize = 0; // -p
-	bool randSizeMinMax = 0; // -l
+	bool datagramSizeSet = 0; // -d // --datagram-size
+	bool payloadSize = 0; // -p // --payload-size
+	bool randSizeMinMax = 0; // -l // --random-size-minmax
     int bytesSizeMin = 0;
     int bytesSizeMax = 0;
-	bool randSizeAvgStd = 0; // -r
+	bool randSizeAvgStd = 0; // -r // --random-size-avgstd
     int bytesSizeAvg = 0;
     int bytesSizeStd = 0;
-	bool randTimeMinMax = 0; // -s
+	bool randTimeMinMax = 0; // -s // --random-time-minmax
     int msecsTimeMin = 0;
     int msecsTimeMax = 0;
-	bool randTimeAvgStd = 0; // -t
+	bool randTimeAvgStd = 0; // -t // --random-time-avgstd
     int msecsTimeAvg = 0;
     int msecsTimeStd = 0;
-	bool increasingSize = 0; // -i
+	bool increasingSize = 0; // -i // --increasing-size
+	excludingPing = 0; // -e // --exclude
     int sizeInitial = 0;
     int sizeGrowth = 0;
-	bool multiplePings = 0; // -n
+	bool multiplePings = 0; // -n // --ping-count
 	pingsToSend = 5; // DEFAULT VALUE of 5
-	bool csvMode = 0; // -c
-
-	if(argc-1 == 0)
+	bool csvMode = 0; // -c // --csv
+	if(argc - 1 == 0)
     {
         printf("Usage: ePing (IP Address) -n (number of pings) -e (num of pings to exclude from summary)\n");
         return(1);
@@ -472,7 +472,7 @@ int main(int argc, const char** argv)
 	for(int i = 2; i < argc; i++) {
         // argv[0] is the ./a which is input
         // argv[1] is the address (IPv4, DNS, IPv6)
-		if(strcmp(argv[i],"-q") == 0)
+		if(strcmp(argv[i],"-q") == 0 || strcmp(argv[i],"--request-time") == 0)
 		{
 			if(timeBetweenRepReq || randTimeMinMax || randTimeAvgStd)
 			{
@@ -493,7 +493,7 @@ int main(int argc, const char** argv)
 				}
 			}
 		}
-		else if(strcmp(argv[i],"-b") == 0)
+		else if(strcmp(argv[i],"-b") == 0 || strcmp(argv[i],"--reply-request-time") == 0)
 		{
 			if(timeBetweenReq || randTimeMinMax || randTimeAvgStd)
 			{
@@ -514,7 +514,7 @@ int main(int argc, const char** argv)
 				}
 			}
 		}
-		else if(strcmp(argv[i],"-d") == 0)
+		else if(strcmp(argv[i],"-d") == 0 || strcmp(argv[i],"--datagram-size") == 0)
 		{
 			if(payloadSize || randSizeMinMax || randSizeAvgStd)
 			{
@@ -536,7 +536,7 @@ int main(int argc, const char** argv)
 				}
 			}
 		}
-		else if(strcmp(argv[i],"-p") == 0)
+		else if(strcmp(argv[i],"-p") == 0 || strcmp(argv[i],"--payload-size") == 0)
 		{
 			if(datagramSizeSet || randSizeMinMax || randSizeAvgStd)
 			{
@@ -557,7 +557,7 @@ int main(int argc, const char** argv)
 				}
 			}
 		}
-		else if(strcmp(argv[i],"-l") == 0)
+		else if(strcmp(argv[i],"-l") == 0 || strcmp(argv[i],"--random-size-minmax") == 0)
 		{
 			if(datagramSizeSet || payloadSize || increasingSize || randSizeAvgStd)
 			{
@@ -588,7 +588,7 @@ int main(int argc, const char** argv)
 				}
 			}
 		}
-		else if(strcmp(argv[i],"-r") == 0)
+		else if(strcmp(argv[i],"-r") == 0 || strcmp(argv[i],"--random-size-avgstd") == 0)
 		{
 			if(datagramSizeSet || payloadSize || increasingSize || randSizeMinMax)
 			{
@@ -611,7 +611,7 @@ int main(int argc, const char** argv)
 				}
 			}
 		}
-		else if(strcmp(argv[i],"-s") == 0)
+		else if(strcmp(argv[i],"-s") == 0 || strcmp(argv[i],"--random-time-minmax") == 0)
 		{
 			if(timeBetweenReq || timeBetweenRepReq || randTimeAvgStd)
 			{
@@ -642,7 +642,7 @@ int main(int argc, const char** argv)
 				}
 			}
 		}
-		else if(strcmp(argv[i],"-t") == 0)
+		else if(strcmp(argv[i],"-t") == 0 || strcmp(argv[i],"--random-time-avgstd") == 0)
 		{
 			if(timeBetweenReq || timeBetweenRepReq || randTimeMinMax)
 			{
@@ -665,7 +665,7 @@ int main(int argc, const char** argv)
 				}
 			}
 		}
-		else if(strcmp(argv[i],"-i") == 0)
+		else if(strcmp(argv[i],"-i") == 0 || strcmp(argv[i],"--increasing-size") == 0)
 		{
 			if(datagramSizeSet || payloadSize || randSizeMinMax || randSizeAvgStd)
 			{
@@ -688,7 +688,7 @@ int main(int argc, const char** argv)
 				}
 			}
 		}
-		else if(strcmp(argv[i],"-e") == 0)
+		else if(strcmp(argv[i],"-e") == 0 || strcmp(argv[i],"--exclude") == 0)
 		{
 			if(i + 1 < argc && atoi(argv[i + 1]) > 0)
 			{
@@ -708,7 +708,7 @@ int main(int argc, const char** argv)
 			}
 			
 		}
-		else if(strcmp(argv[i],"-n") == 0)
+		else if(strcmp(argv[i],"-n") == 0 || strcmp(argv[i],"--ping-count") == 0)
 		{
 			if(i + 1 < argc && atoi(argv[i + 1]) > 0)
 			{
@@ -724,7 +724,7 @@ int main(int argc, const char** argv)
 			}
 			
 		}
-		else if(strcmp(argv[i], "-c") == 0)
+		else if(strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--csv") == 0)
 		{
 			csvMode = 1;
 			printf("Flag -c set! Replies will be output to output.csv.\n");
