@@ -31,6 +31,7 @@
  */
 #define IP_MINLENGTH 34
 #define ICMP_MINLENGTH 16
+#define LISTEN_TIMEOUT 2
 #include <omp.h>
 #include <math.h>
 #include <iostream>
@@ -102,6 +103,7 @@ u_char * packetIP[100];
  
  */
 int sent;
+int packetsTimedOut = 0;
 int processID;
 int icmpPayloadLength = 30;
 int pingsToSend = 5;
@@ -263,14 +265,14 @@ void report()
  and does some basic processing.
  
  */
-void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool excludingPings, float timeoutLength)
+void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool excludingPings, int timeoutLength)
 {
 	/* Setting some variables needed for select() and our file descriptor */
 	char receivedPacketBuffer[512];
 	fd_set readfds;
 	FD_SET(socketDescriptor, &readfds);
 	struct timeval timeout;
-	timeout.tv_sec = 4; // timeout period, seconds (added second, if that matters)
+	timeout.tv_sec = timeoutLength; // timeout period, seconds (added second, if that matters)
     //printf("Timeout length")
 	timeout.tv_usec = 0; // timeuot period, microseconds 1,000,000 micro = second
     // TODO Make this timeout dependent on how many pings have been sent...
@@ -283,7 +285,9 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
 	else if(selectStatus == 0)
 	{
 		printf("I'm tired of waiting. Timeout.\n");
+        packetsTimedOut++;
 		csvOutput << "Dropped" << endl;
+        return;
 	}
 	else
 	{
@@ -481,7 +485,7 @@ int main(int argc, const char** argv)
                 }
                 else
                 {
-                    if(i + 1 < argc && atoi(argv[i + 1]) > 0)
+                    if(i + 1 < argc && atoi(argv[i + 1]) >= 0)
                     {
                         timeBetweenReq = true;
                         msecsBetweenReq = atoi(argv[i + 1]);
@@ -856,11 +860,9 @@ int main(int argc, const char** argv)
         {
             while(pingsSent < pingsToSend)
             {
+                
                 pingICMP(socketDescriptor, icmpPayloadLength);
-                while(pingsReceived < pingsSent)
-                {
-                    listenICMP(socketDescriptor, &sourceSocket, 0, 0, msecsBetweenReq * 2000);
-                }
+                listenICMP(socketDescriptor, &sourceSocket, 0, 0, LISTEN_TIMEOUT);
                 usleep(msecsBetweenRepReq * 1000);
             }
             
@@ -917,15 +919,15 @@ int main(int argc, const char** argv)
                     /* If we're excluding some pings, listen but don't print any info */
                     if(excludingPing && pingsReceived < pingsToExclude)
                     {
-                        listenICMP(socketDescriptor, &sourceSocket, 1, 1, msecsBetweenReq * 2000);
+                        listenICMP(socketDescriptor, &sourceSocket, 1, 1, LISTEN_TIMEOUT);
                     }
                     else if(csvMode)
                     {
-                        listenICMP(socketDescriptor, &sourceSocket, 1, 0, msecsBetweenReq * 2000);
+                        listenICMP(socketDescriptor, &sourceSocket, 1, 0, LISTEN_TIMEOUT);
                     }
                     else
                     {
-                        listenICMP(socketDescriptor, &sourceSocket, 0, 0, msecsBetweenReq * 2000);
+                        listenICMP(socketDescriptor, &sourceSocket, 0, 0, LISTEN_TIMEOUT);
                     }
                     
                     /* Check if we're done listening */
@@ -933,6 +935,7 @@ int main(int argc, const char** argv)
                     {
                         break;
                     }
+                    
                 }
                 
             }
