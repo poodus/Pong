@@ -1,0 +1,12 @@
+.TH ePing 8 "2013" Linux Ericsson
+.SH NAME
+ePing \- A cross-platform flexible ping utility for the 21st century.
+.SH SYNOPSYS
+.B ./ePing.out ADDRESS [OPTIONS]
+.SH DESCRIPTION
+.B ePing
+is an implementation of the class ping utility with added functionality. It uses the ICMP's ECHO_REQUEST to elicit an ECHO_REPLY from a host. Uses OpenMP for multithreading.
+.SH OPTIONS
+.TP
+.B \-q ", " \-\-request\-time \fItimeBetweenPings\fR
+Set the length of time in milliseconds between pings. Default is 1000 ms.
