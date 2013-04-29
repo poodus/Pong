@@ -847,20 +847,33 @@ int main(int argc, const char** argv)
         /* Specify that we want two threads (one for listening, one for sending) */
         omp_set_num_threads(2);
         
+        /*
+         
+         Execute the ping/listen functions in sequential mode
+         
+         */
         if(timeBetweenRepReq)
         {
-            printf("Running sequentially (not implemented)\n");
-            // Send ping
-            // Wait until received reply (pingsReceived == pingsSent) || timeout
+            while(pingsSent < pingsToSend)
+            {
+                pingICMP(socketDescriptor, icmpPayloadLength);
+                while(pingsReceived < pingsSent)
+                {
+                    listenICMP(socketDescriptor, &sourceSocket, 0, 0, msecsBetweenReq * 2000);
+                }
+                usleep(msecsBetweenRepReq * 1000);
+            }
             
         }
+        
+        /*
+         
+         Execute the ping/listen functions in parallel with OpenMP threading
+         
+         */
         else
         {
-            /*
-             
-             Execute the ping/listen functions in parallel with OpenMP threading
-             
-             */
+            
 #pragma omp parallel sections
             {
                 
