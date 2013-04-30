@@ -1,9 +1,10 @@
-ePing
+ePing (being renmaed to pong)
 ==============
 
-We're building a flexible ping utility, which will be command-line executable.
-We're also taking suggestions for a better name. ePing = Ericsson ping (since
-we're making this for Ericsson).
+We're building a flexible ping utility, which is be command-line executable
+on both Mac and Linux. Ping for the 21st Century.
+
+We're also going to rename it to "pong" after we give the code to our sponsor.
 
 Developed as a NDSU Capstone Project -- Spring 2013 -- Dr. Dean Knudson.
 
