@@ -1,6 +1,6 @@
 /*
  
- ePing
+ Pong
  
  Using the Internet Control Message Protocol (ICMP) ECHO_REQUEST
  and ECHO_REPLY messages to measure round-trip-delays and packet
@@ -26,9 +26,10 @@
 
 /*
  
- Imports
+ Imports and definitions
  
  */
+
 #define IP_MINLENGTH 34
 #define ICMP_MINLENGTH 16
 #define LISTEN_TIMEOUT 2
@@ -70,7 +71,7 @@
 #include <windows.h>
 #include <winsock2.h>
 struct sockaddr_in *socketAddress;
-// ICMP header
+/* ICMP Header for Windows branch */
 struct icmp {
     BYTE icmp_type;          // ICMP packet type
     BYTE icmp_code;          // Type sub code
@@ -99,7 +100,7 @@ u_char * packetIP[100];
 
 /*
  
- Global Variables
+ Global Variables for stats and more
  
  */
 int sent;
@@ -111,6 +112,7 @@ int pingsSent = 0;
 int pingsToExclude = 0;
 double totalResponseTime = 0.0;
 double sumOfResponseTimesSquared = 0.0;
+double roundTripTime = 0.0;
 int pingsReceived = 0;
 bool excludingPing;
 
@@ -135,9 +137,6 @@ mach_timespec_t sentTime, receivedTime;
 #elif __GNUC__
 struct timespec sentTime2, receivedTime2;
 #endif
-
-//static timespec ts;
-double roundTripTime = 0.0;
 
 
 
@@ -200,8 +199,7 @@ void pingICMP(int socketDescriptor, int icmpPayloadLength)
     host_get_clock_service(mach_host_self(), SYSTEM_CLOCK, &cclock);
     clock_get_time(cclock, (mach_timespec_t *)icmpHeader->icmp_data);
     mach_port_deallocate(mach_task_self(), cclock);
-    //ts.tv_sec = sentTime.tv_sec;
-    //ts.tv_nsec = sentTime.tv_nsec;
+
 #elif __WINDOWS__
     //  GetTick64Count()
 #elif __GNUC__
@@ -221,6 +219,7 @@ void pingICMP(int socketDescriptor, int icmpPayloadLength)
 	if(sent > 0)
 	{
         pingsSent++;
+        /* Increment the packet sequence number */
         icmpHeader->icmp_seq++;
 	}
 	else
@@ -234,7 +233,9 @@ void pingICMP(int socketDescriptor, int icmpPayloadLength)
  report()
  
  This function reports the final statistics, either to the command line
- or to a CSV (comma separated value) file.
+ or to a CSV (comma separated value) file. Current statistics and output
+ information includes pings sent, pings received, pings dropped, pings excluded, 
+ average response time, and standard deviation for response time.
  
  */
 void report()
@@ -261,8 +262,9 @@ void report()
  
  listenICMP()
  
- This function receives ECHO_REPLY packets sent to the host computer
- and does some basic processing.
+ This function waits from an incoming packet, checks to see if it is our ECHO_REPLY,
+ and then gets data out of the packet and computes statistics or doesn't (depending 
+ on if we're excluding that response or not).
  
  */
 void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool excludingPings, int timeoutLength)
@@ -370,6 +372,7 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
                     inet_ntop(AF_INET, &(receivedIPHeader->ip_src), str, INET_ADDRSTRLEN);
                     if(!excludingPings)
                     {
+                        /* If we're in CSV mode, print info to the file instead of to the terminal */
                         if(quiet)
                         {
                             printf(".\n");
@@ -385,7 +388,7 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
             }
             else
             {
-                printf("Not a reply.\n"); // Should this stay for the Ericsson release?
+                printf("Not a reply.\n");
             }
         }
         
@@ -835,8 +838,10 @@ int main(int argc, const char** argv)
         /* Initialize some ICMP and IP header values */
         buildPing();
         
-        /* Counting variable */
+        /* Just a counting variable */
         int i = 0;
+        
+        /* Open the CSV file */
         csvOutput.open("output.csv");
         
         /* Variables and generators for random size/time */
@@ -853,7 +858,7 @@ int main(int argc, const char** argv)
         
         /*
          
-         Execute the ping/listen functions in sequential mode
+         Execute the ping/listen functions in sequential mode (wait for reply before sending request)
          
          */
         if(timeBetweenRepReq)
@@ -879,7 +884,7 @@ int main(int argc, const char** argv)
 #pragma omp parallel sections
             {
                 
-                /* Ping block */
+                /* Sending block */
 #pragma omp section
                 for (i = 0; i < pingsToSend; i++)
                 {
@@ -911,7 +916,7 @@ int main(int argc, const char** argv)
                     }
                 }
                 
-                /* Listen block */
+                /* Listening block */
 #pragma omp section
                 while(1) // TODO make this timeout...
                 {
@@ -921,16 +926,18 @@ int main(int argc, const char** argv)
                     {
                         listenICMP(socketDescriptor, &sourceSocket, 1, 1, LISTEN_TIMEOUT);
                     }
+                    /* If we're outputting to a CSV file, don't print out so much on the terminal */
                     else if(csvMode)
                     {
                         listenICMP(socketDescriptor, &sourceSocket, 1, 0, LISTEN_TIMEOUT);
                     }
+                    /* Otherwise, print all statistics and information to the terminal */
                     else
                     {
                         listenICMP(socketDescriptor, &sourceSocket, 0, 0, LISTEN_TIMEOUT);
                     }
                     
-                    /* Check if we're done listening */
+                    /* Check if we're done listening. This logic could be more robust. */
                     if(i == pingsToSend - 1 || pingsToSend == pingsReceived)
                     {
                         break;
