@@ -467,7 +467,7 @@ int main(int argc, const char** argv)
         bool csvMode = 0; // -c // --csv
         if(argc - 1 == 0)
         {
-            printf("USAGE:\nePing [host IP or domain name]\n[-n/--pings-to-send num of pings to send]\n[-e/--exclude num of pings to exclude from stats]\n\nTIME\n[-q/--request-time time between sent pings]\n[-t/--random-time-avgstd set random, normally distributed time between pings - enter average and standard deviation]\n\nSIZE\n[-p/--payload-size ICMP payload size] OR [-d/--datagram-size size of whole packet]\n[-r/--random-size-avgstd set random, normally distributed packet sizes - enter average and standard deviation]\n");
+            printf("USAGE:\nePing [host IP or domain name]\n[-n/--pings-to-send num of pings to send]\n[-e/--exclude num of pings to exclude from stats]\n\nTIME\n[-q/--request-time time between sent pings]\n[-t/--random-time-avgstd set random, normally distributed time between pings - enter average and standard deviation]\n[-z/--timeout manually set timeout for listening method]\n\nSIZE\n[-p/--payload-size ICMP payload size] OR [-d/--datagram-size size of whole packet]\n[-r/--random-size-avgstd set random, normally distributed packet sizes - enter average and standard deviation]\n\nOUTPUT\n[-c/--csv output reply information to a csv file]\n");
             printf("----------------------------------------------------------------\n");
             return(1);
         }
