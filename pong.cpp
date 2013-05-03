@@ -252,7 +252,8 @@ void report()
         {
             printf(", %d excluded from summary\n", pingsToExclude);
         }
-        else{
+        else
+        {
             printf("\n");
         }
         double average = totalResponseTime / (pingsSent - pingsToExclude);
@@ -754,10 +755,11 @@ int main(int argc, const char** argv)
                 if(i + 1 < argc)
                 {
                     csvFileName = argv[i+1];
+                    i++;
                 }
                 else
                 {
-                    csvFileName = "output";
+                    csvFileName = "output.csv";
                 }
                 /* Open the CSV file */
                 csvOutput.open(csvFileName);
