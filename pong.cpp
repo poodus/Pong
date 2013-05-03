@@ -769,6 +769,7 @@ int main(int argc, const char** argv)
                 if(i + 1 < argc && atoi(argv[i + 1]) > 0)
                 {
                     timeoutInput = atoi(argv[i + 1]);
+                    i++;
                 }
   
                 printf("Flag -z set! Listening timeout will be set to %d seconds.\n", timeoutInput);
