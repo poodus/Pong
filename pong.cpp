@@ -376,11 +376,11 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
                         if(quiet)
                         {
                             printf(".\n");
-                            csvOutput << (bytesReceived+14) << "," << str << "," << receivedICMPHeader->icmp_seq << "," << (int)receivedIPHeader->ip_ttl << "," << roundTripTime << endl;
+                            csvOutput << (bytesReceived + 14) << "," << str << "," << receivedICMPHeader->icmp_seq << "," << (int)receivedIPHeader->ip_ttl << "," << roundTripTime << endl;
                         }
                         else
                         {
-                            printf("%d bytes from %s packet number:%d  ttl:%d  time:%f ms\n", (bytesReceived+14), str, receivedICMPHeader->icmp_seq, (int)receivedIPHeader->ip_ttl, roundTripTime);
+                            printf("%d bytes from %s packet number:%d  ttl:%d  time:%f ms\n", (bytesReceived + 14), str, receivedICMPHeader->icmp_seq, (int)receivedIPHeader->ip_ttl, roundTripTime);
                         }
                         
                     }
@@ -704,7 +704,7 @@ int main(int argc, const char** argv)
                             
                             //Subtract growth from initial once so when we ping, we can add sizeGrowth to it every time,
                             //and initialGrowth is still proper
-                            icmpPayloadLength = sizeInitial - sizeGrowth - IP_MINLENGTH - ICMP_MINLENGTH;
+                            icmpPayloadLength = sizeInitial - sizeGrowth - IP_MINLENGTH - ICMP_MINLENGTH + 8;
                         }
                         else
                         {
