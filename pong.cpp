@@ -32,7 +32,7 @@
 
 #define IP_MINLENGTH 34
 #define ICMP_MINLENGTH 16
-#define LISTEN_TIMEOUT 2
+#define DEFAULT_LISTEN_TIMEOUT 2
 #include <omp.h>
 #include <math.h>
 #include <iostream>
@@ -44,7 +44,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <string.h>
+#include <string>
 #include <stdio.h>
 #include <ctype.h>
 #include <errno.h>
@@ -100,7 +100,9 @@ u_char * packetIP[100];
 
 /*
  
- Global Variables for stats and more
+ Global Variables for stats and keeping track
+ of how many pings were sent, how many need
+ to be excluded, and more.
  
  */
 int sent;
@@ -115,6 +117,7 @@ double sumOfResponseTimesSquared = 0.0;
 double roundTripTime = 0.0;
 int pingsReceived = 0;
 bool excludingPing;
+int timeoutInput = DEFAULT_LISTEN_TIMEOUT;
 
 /*
  
@@ -123,6 +126,7 @@ bool excludingPing;
  */
 using namespace std;
 ofstream csvOutput;
+string csvFileName = "output.csv";
 
 /*
  
@@ -240,7 +244,6 @@ void pingICMP(int socketDescriptor, int icmpPayloadLength)
  */
 void report()
 {
-    
     if(pingsSent != 0)
     {
         printf("----------------------------------------------------------------\n");
@@ -299,15 +302,12 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
             /* Receive the data */
 			ssize_t bytesReceived = recvfrom(socketDescriptor, receivedPacketBuffer, sizeof(receivedPacketBuffer), 0, (struct sockaddr *)&fromWhom, &fromWhomLength);
             
-            
             /* Format the received data into the IP struct, then shift bits */
             struct ip * receivedIPHeader = (struct ip *) receivedPacketBuffer;
             int headerLength = receivedIPHeader->ip_hl << 2;
             
             /* Format the received data into the ICMP struct */
             receivedICMPHeader = (struct icmp *)(receivedPacketBuffer + headerLength);
-            
-            
             
             /* Get the time */
 #if __MACH__
@@ -320,7 +320,6 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
                 --receivedTime.tv_sec;
                 receivedTime.tv_nsec += 1000000000;
             }
-            
             
 #elif __WINDOWS__
             //  GetTick64Count()
@@ -366,10 +365,11 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
                         totalResponseTime += roundTripTime;
                     }
                     
-                    // TODO remove the +14...
                     /* Get presentation format of source IP */
                     char str[INET_ADDRSTRLEN];
                     inet_ntop(AF_INET, &(receivedIPHeader->ip_src), str, INET_ADDRSTRLEN);
+                    
+                    /* If we're counting stats for this reply, add data to running stats */
                     if(!excludingPings)
                     {
                         /* If we're in CSV mode, print info to the file instead of to the terminal */
@@ -378,21 +378,15 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
                             printf(".\n");
                             csvOutput << (bytesReceived + 14) << "," << str << "," << receivedICMPHeader->icmp_seq << "," << (int)receivedIPHeader->ip_ttl << "," << roundTripTime << endl;
                         }
+                        /* Otherwise, print received reply information to the terminal */
                         else
                         {
                             printf("%d bytes from %s packet number:%d  ttl:%d  time:%f ms\n", (bytesReceived + 14), str, receivedICMPHeader->icmp_seq, (int)receivedIPHeader->ip_ttl, roundTripTime);
                         }
-                        
                     }
                 }
             }
-            else
-            {
-                printf("Not a reply.\n");
-            }
         }
-        
-		
 	}
 }
 
@@ -758,7 +752,26 @@ int main(int argc, const char** argv)
             else if(strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--csv") == 0)
             {
                 csvMode = 1;
-                printf("Flag -c set! Replies will be output to output.csv.\n");
+                if(i + 1 < argc)
+                {
+                    csvFileName = argv[i+1];
+                }
+                else
+                {
+                    csvFileName = "output";
+                }
+                /* Open the CSV file */
+                csvOutput.open(csvFileName);
+                printf("Flag -c set! Replies will be output to %s.\n", csvFileName.c_str());
+            }
+            else if(strcmp(argv[i], "-z") == 0 || strcmp(argv[i], "--timeout") == 0)
+            {
+                if(i + 1 < argc && atoi(argv[i + 1]) > 0)
+                {
+                    timeoutInput = atoi(argv[i + 1]);
+                }
+  
+                printf("Flag -z set! Listening timeout will be set to %d seconds.\n", timeoutInput);
             }
             else
             {
@@ -811,7 +824,7 @@ int main(int argc, const char** argv)
          
          */
         sockaddr_in sourceSocket;
-        sourceSocket.sin_addr = srcIP;
+        sourceSocket.sin_addr = srcIP;  
         sourceSocket.sin_family = AF_INET;
         
         /* We use the process ID from this program as our ICMP packet id */
@@ -839,9 +852,6 @@ int main(int argc, const char** argv)
         /* Just a counting variable */
         int i = 0;
         
-        /* Open the CSV file */
-        csvOutput.open("output.csv");
-        
         /* Variables and generators for random size/time */
         double randomDatagramSize;
         double randomTime;
@@ -865,7 +875,7 @@ int main(int argc, const char** argv)
             {
                 
                 pingICMP(socketDescriptor, icmpPayloadLength);
-                listenICMP(socketDescriptor, &sourceSocket, 0, 0, LISTEN_TIMEOUT);
+                listenICMP(socketDescriptor, &sourceSocket, 0, 0, timeoutInput);
                 usleep(msecsBetweenRepReq * 1000);
             }
             
@@ -922,17 +932,19 @@ int main(int argc, const char** argv)
                     /* If we're excluding some pings, listen but don't print any info */
                     if(excludingPing && pingsReceived < pingsToExclude)
                     {
-                        listenICMP(socketDescriptor, &sourceSocket, 1, 1, LISTEN_TIMEOUT);
+                        listenICMP(socketDescriptor, &sourceSocket, 1, 1, timeoutInput);
                     }
+                    
                     /* If we're outputting to a CSV file, don't print out so much on the terminal */
                     else if(csvMode)
                     {
-                        listenICMP(socketDescriptor, &sourceSocket, 1, 0, LISTEN_TIMEOUT);
+                        listenICMP(socketDescriptor, &sourceSocket, 1, 0, timeoutInput);
                     }
+                    
                     /* Otherwise, print all statistics and information to the terminal */
                     else
                     {
-                        listenICMP(socketDescriptor, &sourceSocket, 0, 0, LISTEN_TIMEOUT);
+                        listenICMP(socketDescriptor, &sourceSocket, 0, 0, timeoutInput);
                     }
                     
                     /* Check if we're done listening. This logic could be more robust. */
@@ -948,7 +960,10 @@ int main(int argc, const char** argv)
         
         /* Print final statistics and quit */
         report();
-        csvOutput.close();
+        if(csvMode)
+        {
+            csvOutput.close();
+        }
 #ifdef WIN32
         int result = WSACleanup();
 #endif
