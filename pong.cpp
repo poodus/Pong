@@ -928,7 +928,7 @@ int main(int argc, const char** argv)
                 
                 /* Listening block */
 #pragma omp section
-                while(1) // TODO make this timeout...
+                while(i != pingsToSend - 1 && pingsToSend != pingsReceived + packetsTimedOut)
                 {
                     
                     /* If we're excluding some pings, listen but don't print any info */
@@ -947,12 +947,6 @@ int main(int argc, const char** argv)
                     else
                     {
                         listenICMP(socketDescriptor, &sourceSocket, 0, 0, timeoutInput);
-                    }
-                    
-                    /* Check if we're done listening. This logic could be more robust. */
-                    if(i == pingsToSend - 1 || pingsToSend == pingsReceived + packetsTimedOut)
-                    {
-                        break;
                     }
                     
                 }
