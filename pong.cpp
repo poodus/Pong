@@ -790,7 +790,6 @@ int main(int argc, const char** argv)
          
          */
 #if WIN32
-        printf("main() mark 5 (windows)\n");
         sockAddress = &whereto;
         int sizeOfAddress=sizeof(IPHeader.destinationIPAddress);
         if(WSAStringToAddress((char *)destination,AF_INET,NULL,(LPSOCKADDR)&IPHeader.destinationIPAddress.S_un.S_un_W,&sizeOfAddress)!=0)
@@ -799,7 +798,6 @@ int main(int argc, const char** argv)
             std::cout<<error<<std::endl;
             std::cout<<sizeOfAddress<<std::endl;
         }
-        printf("main() mark 5.1(windows)\n");
         if(WSAStringToAddress((char*)destination,AF_INET,NULL,(LPSOCKADDR)&(socketAddress->sin_addr),(int*)sizeof(socketAddress->sin_addr))!=0)
         {
             int error=WSAGetLastError();
