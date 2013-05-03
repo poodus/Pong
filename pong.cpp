@@ -44,7 +44,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <string>
+#include <string.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <errno.h>
