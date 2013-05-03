@@ -463,7 +463,6 @@ int main(int argc, const char** argv)
         int sizeGrowth = 0;
         excludingPing = 0; // -e // --exclud
         bool multiplePings = 0; // -n // --ping-count
-        pingsToSend = 5; // DEFAULT VALUE of 5
         bool csvMode = 0; // -c // --csv
         if(argc - 1 == 0)
         {
@@ -949,7 +948,7 @@ int main(int argc, const char** argv)
                     }
                     
                     /* Check if we're done listening. This logic could be more robust. */
-                    if(i == pingsToSend - 1 || pingsToSend == pingsReceived)
+                    if(i == pingsToSend - 1 || pingsToSend == pingsReceived + packetsTimedOut)
                     {
                         break;
                     }
