@@ -476,6 +476,7 @@ int main(int argc, const char** argv)
         }
         else
         {
+
             /* Check if we're root. If not, we can't create the raw socket necessary for ICMP */
             if(getuid()!=0 && geteuid()!=0)
             {
@@ -489,7 +490,9 @@ int main(int argc, const char** argv)
             socketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
             
             /* Drop root permissions */
+            seteuid(501);
             setuid(getuid());
+
         }
         for(int i = 2; i < argc; i++) {
             // argv[0] is the ./a which is input
