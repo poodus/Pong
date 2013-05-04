@@ -526,7 +526,7 @@ int main(int argc, const char** argv)
                 }
                 else
                 {
-                    if(i + 1 < argc && atoi(argv[i + 1]) > 0)
+                    if(i + 1 < argc && atoi(argv[i + 1]) >= 0)
                     {
                         timeBetweenRepReq = true;
                         msecsBetweenRepReq = atoi(argv[i + 1]);
