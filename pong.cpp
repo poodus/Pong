@@ -435,6 +435,8 @@ int main(int argc, const char** argv)
 #endif
         printf("----------------------------------------------------------------\n");
         
+        int socketDescriptor;
+        
         /*
          
          Variables for command line flag processing
@@ -465,11 +467,29 @@ int main(int argc, const char** argv)
         excludingPing = 0; // -e // --exclud
         bool multiplePings = 0; // -n // --ping-count
         bool csvMode = 0; // -c // --csv
+        
         if(argc - 1 == 0)
         {
             printf("USAGE:\nePing [host IP or domain name]\n[-n/--pings-to-send num of pings to send]\n[-e/--exclude num of pings to exclude from stats]\n\nTIME\n[-q/--request-time time between sent pings]\n[-t/--random-time-avgstd set random, normally distributed time between pings - enter average and standard deviation]\n[-z/--timeout manually set timeout for listening method]\n\nSIZE\n[-p/--payload-size ICMP payload size] OR [-d/--datagram-size size of whole packet]\n[-r/--random-size-avgstd set random, normally distributed packet sizes - enter average and standard deviation]\n\nOUTPUT\n[-c/--csv output reply information to a csv file]\n");
             printf("----------------------------------------------------------------\n");
             return(1);
+        }
+        else
+        {
+            /* Check if we're root. If not, we can't create the raw socket necessary for ICMP */
+            if(getuid()!=0 && geteuid()!=0)
+            {
+                printf("UID: %d EUID: %d", getuid(), geteuid());
+                printf("\nCan't run. I need root permissions to create raw socket. Sorry.\n");
+                printf("----------------------------------------------------------------\n");
+                return(1);
+            }
+            
+            /* Create socket descriptor for sending and receiving traffic */
+            socketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
+            
+            /* Drop root permissions */
+            setuid(getuid());
         }
         for(int i = 2; i < argc; i++) {
             // argv[0] is the ./a which is input
@@ -831,20 +851,6 @@ int main(int argc, const char** argv)
         
         /* We use the process ID from this program as our ICMP packet id */
         processID = getpid() & 0xFFFF;
-        
-        /* Check if we're root. If not, we can't create the raw socket necessary for ICMP */
-        if(getuid()!=0 && geteuid()!=0)
-        {
-            printf("UID: %d EUID: %d", getuid(), geteuid());
-            printf("\nCan't run. I need root permissions to create raw socket. Sorry.\n");
-            return(1);
-        }
-        
-        /* Create socket descriptor for sending and receiving traffic */
-        int socketDescriptor = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
-        
-        /* Drop root permissions */
-        setuid(getuid());
         
         printf("----------------------------------------------------------------\n");
         
