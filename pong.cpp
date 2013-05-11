@@ -291,6 +291,7 @@ void listenICMP(int socketDescriptor, sockaddr_in * fromWhom, bool quiet, bool e
 	}
 	else if(selectStatus == 0)
 	{
+		//killSwitch = true;
 		printf("I'm tired of waiting. Timeout.\n");
         packetsTimedOut++;
 		csvOutput << "Dropped" << endl;
@@ -981,9 +982,12 @@ int main(int argc, const char** argv)
     
     void interrupt(int signal)
     {
-		printf("INTERRUPT THIS, BITCH\n");
-		printf("pingsToSend = %d\npingsSent = %d\n", pingsToSend, pingsSent);
+		if(killSwitch)
+		{
+		//printf("INTERRUPT THIS, BITCH\n");
+		//printf("pingsToSend = %d\npingsSent = %d\n", pingsToSend, pingsSent);
 		pingsToSend = 0;
 		killSwitch = false;
-		report();
+		//report();
+		}
 	}
