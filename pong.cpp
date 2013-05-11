@@ -118,6 +118,7 @@ double roundTripTime = 0.0;
 int pingsReceived = 0;
 bool excludingPing;
 int timeoutInput = DEFAULT_LISTEN_TIMEOUT;
+volatile bool killSwitch = true;
 
 /*
  
@@ -415,6 +416,8 @@ void buildPing()
 	ipHeader->ip_hl = 5;
 }
 
+
+void interrupt(int signal);
 /*
  
  main()
@@ -426,6 +429,7 @@ void buildPing()
 char *argv[2];
 int main(int argc, const char** argv)
 {
+	signal(SIGINT, interrupt);
 #ifdef WIN32
 	WSADATA wsaData;
 	int result=WSAStartup(MAKEWORD(2,0), &wsaData);
@@ -937,7 +941,7 @@ int main(int argc, const char** argv)
                 
                 /* Listening block */
 #pragma omp section
-                while(i != pingsToSend - 1 && pingsToSend != pingsReceived + packetsTimedOut)
+                while(i != pingsToSend - 1 && pingsToSend != pingsReceived + packetsTimedOut && killSwitch)
                 {
                     
                     /* If we're excluding some pings, listen but don't print any info */
@@ -974,3 +978,12 @@ int main(int argc, const char** argv)
 #endif
         return(0);
     }
+    
+    void interrupt(int signal)
+    {
+		printf("INTERRUPT THIS, BITCH\n");
+		printf("pingsToSend = %d\npingsSent = %d\n", pingsToSend, pingsSent);
+		pingsToSend = 0;
+		killSwitch = false;
+		report();
+	}
