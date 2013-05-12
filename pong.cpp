@@ -984,10 +984,7 @@ int main(int argc, const char** argv)
     {
 		if(killSwitch)
 		{
-		//printf("INTERRUPT THIS, BITCH\n");
-		//printf("pingsToSend = %d\npingsSent = %d\n", pingsToSend, pingsSent);
-		pingsToSend = 0;
-		killSwitch = false;
-		//report();
+			pingsToSend = 0;
+			killSwitch = false;
 		}
 	}
