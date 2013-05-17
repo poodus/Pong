@@ -969,6 +969,7 @@ int main(int argc, const char** argv)
         
         /* Print final statistics and quit */
         report();
+        
         if(csvMode)
         {
             csvOutput.close();
