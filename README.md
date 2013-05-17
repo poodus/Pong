@@ -10,7 +10,7 @@ Developed as a NDSU Capstone Project -- Spring 2013 -- Dr. Dean Knudson.
 
 # CONTRIBUTORS
 - [Shane Reetz](https://github.com/poodus) (contact)
-- [Sam Stutsman](https://github.com/TheIronMarx) - Samuel.Stutsman at my.ndsu.edu
+- [Sam Stutsman](https://github.com/TheIronMarx)
 - Previous contributors:
 - [Jeff Geiser](https://github.com/jrgeiser)
 - [Chris Berstler](https://github.com/drsir)
